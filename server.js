@@ -1099,7 +1099,7 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
 // Part 15: Core Functionality - Socket and Message Handling
 const widgetScriptPart15 = `
                 // Socket connection
-                const socket = io("http://chatbothubserver.up.railway.app", {
+                const socket = io("https://chatbothubserver.up.railway.app", {
                     query: { chatbotCode, currentWebsiteURL }
                 });
 
@@ -1194,7 +1194,7 @@ const widgetScriptPart16 = `
                             return;
                         }
 
-                        const response = await fetch(\`http://chatbothubserver.up.railway.app/api/chats/\${loadingChatId}\`);
+                        const response = await fetch(\`https://chatbothubserver.up.railway.app/api/chats/\${loadingChatId}\`);
                         const chat = await response.json();
 
                         // *** IMPORTANT CHECK: Prevent re-rendering if currentChatId has changed while fetching ***
@@ -1233,7 +1233,7 @@ const widgetScriptPart16 = `
                 const loadUserChats = async (email) => {
                     console.log("Widget: Loading user chats for email:", email);
                     try {
-                        const response = await fetch(\`http://chatbothubserver.up.railway.app/api/chats/\${chatbotCode}/\${email}\`);
+                        const response = await fetch(\`https://chatbothubserver.up.railway.app/api/chats/\${chatbotCode}/\${email}\`);
                         const chats = await response.json();
 
                         chatListDiv.innerHTML = \`
