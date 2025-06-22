@@ -5,6 +5,7 @@ import User from "./models/user.js"
 import { PlanValidator } from "./services/plan-validator.js"
 import Staff from "./models/staff.js" // Import the Staff model
 
+const AI_URL = process.env.AI_URL
 // Helper function to send Telegram notifications via webhook
 async function sendTelegramNotification(payload) {
     const TELEGRAM_BOT_URL = process.env.TELEGRAM_BOT_URL;
@@ -33,7 +34,6 @@ async function sendTelegramNotification(payload) {
         console.error("SERVER ERROR: Error sending Telegram notification:", error);
     }
 }
-
 
 export function handleSocket(socket, io) {
     const chatbotCode = socket.handshake.query.chatbotCode
@@ -716,8 +716,8 @@ export function handleSocket(socket, io) {
                                 socket.emit("bot_typing_start") // This is already here for AI call
                                 console.log("SERVER DEBUG: Emitted 'bot_typing_start' for AI call.")
 
-                                console.log(`SERVER DEBUG: Calling AI service at http://192.168.32.1:8000/chat for chat ${chatId}...`)
-                                const aiResponse = await fetch("http://192.168.32.1:8000/chat", {
+                                console.log(`SERVER DEBUG: Calling AI service at ${AI_URL}/chat for chat ${chatId}...`)
+                                const aiResponse = await fetch(`${AI_URL}/chat`, {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({
