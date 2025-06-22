@@ -1,0 +1,11 @@
+services:
+  main-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_BOT_URL=${TELEGRAM_BOT_URL}
