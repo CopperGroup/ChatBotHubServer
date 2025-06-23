@@ -370,6 +370,46 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
                     .chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
                         background: linear-gradient(to bottom, #94a3b8, #64748b);
                     }
+
+                    @media (max-width: 440px) {
+                        #chat-window {
+                            width: 100%;
+                            max-width: 340px;
+                        }
+                        #chatbot-widget {
+                            right: 12px !important; 
+                            bottom: 12px !important;
+                        }
+                    }
+                    @media (max-width: 360px) {
+                        #chat-window {
+                            width: 100%;
+                            max-width: 320px;
+                        }
+                        #chatbot-widget {
+                            right: 10px !important; 
+                            bottom: 10px !important;
+                        }
+                        #chatbot-input-area {
+                            padding: 14px !important;
+                        }
+                        #msg {
+                            padding: 10px 14px !important;
+                        }
+                        #sendBtn {
+                            padding: 10px 14px !important;
+                        }
+                    }
+                    @media (max-width: 340px) {
+                        #chat-window {
+                            width: 100%;
+                            max-width: 310px;
+                        }
+                        #chatbot-widget {
+                            right: 8px !important; 
+                            bottom: 8px !important;
+                        }
+                    }
                 \`;
                 document.head.appendChild(style);`
 
