@@ -20,6 +20,7 @@ const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
     origin: "*",
+    methods: ["GET", "POST"]
   },
 })
 
@@ -1103,7 +1104,9 @@ const widgetScriptPart15 = `
                 console.log("currentWebsiteURL:", currentWebsiteURL);
 
                 const socket = io("https://chatbothubserver.up.railway.app", {
-                    query: { chatbotCode, currentWebsiteURL }
+                    path: '/socket.io',
+                    query: { chatbotCode, currentWebsiteURL },
+                    transports: ['websocket', 'polling'],
                 });
 
                 console.log(socket)
