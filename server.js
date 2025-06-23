@@ -13,6 +13,7 @@ import { handleSocket } from "./socket.js"
 import Website from "./models/website.js"
 import dotenv from "dotenv"
 import { transactionRoutes } from "./routes/transaction.js"
+import { allowedOrigins } from "./services/allowedOrigins.js"
 dotenv.config()
 
 const app = express()
