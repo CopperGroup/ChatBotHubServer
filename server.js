@@ -82,12 +82,12 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
     const websiteLink = website.link.endsWith("/") ? website.link.slice(0, -1) : website.link
     const normalizedRequestOrigin = requestOrigin.endsWith("/") ? requestOrigin.slice(0, -1) : requestOrigin
 
-    if (websiteLink !== normalizedRequestOrigin) {
-      console.log(
-        `Chatbot widget request: Origin mismatch for chatbotCode ${chatbotCode}. Expected: ${website.link}, Got: ${requestOrigin}. Blocking widget.`,
-      )
-      return res.status(403).send("// Access Denied: Origin mismatch. Widget will not load.")
-    }
+    // if (websiteLink !== normalizedRequestOrigin) {
+    //   console.log(
+    //     `Chatbot widget request: Origin mismatch for chatbotCode ${chatbotCode}. Expected: ${website.link}, Got: ${requestOrigin}. Blocking widget.`,
+    //   )
+    //   return res.status(403).send("// Access Denied: Origin mismatch. Widget will not load.")
+    // }
 
     const preferences = website.preferences || {}
     const gradient1 = preferences.colors?.gradient1 || "#667eea"
