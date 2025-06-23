@@ -1099,6 +1099,9 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
 // Part 15: Core Functionality - Socket and Message Handling
 const widgetScriptPart15 = `
                 // Socket connection
+                console.log("chatbotCode:", chatbotCode);
+                console.log("currentWebsiteURL:", currentWebsiteURL);
+
                 const socket = io("https://chatbothubserver.up.railway.app", {
                     query: { chatbotCode, currentWebsiteURL }
                 });
