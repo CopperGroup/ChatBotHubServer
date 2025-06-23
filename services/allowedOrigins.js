@@ -24,6 +24,7 @@ export async function initAllowedOrigins() {
             allowedOrigins.add(site.link);
         }
     });
+    allowedOrigins.add("https://chat-bot-hub.vercel.app")
     console.log("✅ allowedOrigins initialized:", [...allowedOrigins]);
   } catch (error) {
     console.error("❌ Failed to initialize allowedOrigins:", error);
