@@ -511,13 +511,13 @@ export function handleSocket(socket, io) {
             const websiteLink = website.link.endsWith("/") ? website.link.slice(0, -1) : website.link
             const requestOrigin = origin ? (origin.endsWith("/") ? origin.slice(0, -1) : origin) : ""
 
-            if (websiteLink !== requestOrigin) {
-                console.log(
-                    `SERVER WARN: Socket connection: Origin mismatch for chatbotCode ${chatbotCode}. Expected: ${website.link}, Got: ${origin}. Disconnecting.`,
-                )
-                socket.disconnect(true)
-                return
-            }
+            // if (websiteLink !== requestOrigin) {
+            //     console.log(
+            //         `SERVER WARN: Socket connection: Origin mismatch for chatbotCode ${chatbotCode}. Expected: ${website.link}, Got: ${origin}. Disconnecting.`,
+            //     )
+            //     socket.disconnect(true)
+            //     return
+            // }
 
             console.log(`SERVER DEBUG: Widget connection allowed for chatbotCode: ${chatbotCode} from origin: ${origin}.`)
 
