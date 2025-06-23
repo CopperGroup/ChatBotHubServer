@@ -1103,6 +1103,7 @@ const widgetScriptPart15 = `
                     query: { chatbotCode, currentWebsiteURL }
                 });
 
+                console.log(socket)
                 // Message rendering function
                 const renderMessage = (sender, text, timestamp) => {
                     const messageBubble = createMessageBubble(sender, text, timestamp);
