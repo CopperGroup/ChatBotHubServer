@@ -6,6 +6,12 @@ import Staff from "../models/staff.js"
 import Chat from "../models/chat.js"
 import authMiddleware from "../middleware/auth.js"
 
+import {
+  addAllowedOrigin,
+  removeAllowedOrigin,
+  replaceAllowedOrigin,
+} from "../services/allowedOrigins.js"
+
 const router = express.Router()
 
 // Helper function to get Free plan
@@ -54,11 +60,13 @@ router.post("/", async (req, res) => {
         header: "Chat Support",
         allowAIResponses: false,
       },
-      // FIX: Assign the userId to the new owner field
-      owner: userId, 
+      owner: userId,
     })
 
     await website.save()
+
+    // Add the new website's domain to the allowed origins
+    addAllowedOrigin(website.link)
 
     creatingUser.websites.push(website._id)
     await creatingUser.save()
@@ -73,8 +81,7 @@ router.post("/", async (req, res) => {
 // Get all websites
 router.get("/", async (req, res) => {
   try {
-    // FIX: Populate owner when fetching all websites, if needed for the UI
-    const websites = await Website.find().populate("plan").populate({ path: "owner", select: "-password"}) 
+    const websites = await Website.find().populate("plan").populate({ path: "owner", select: "-password" })
     res.json(websites)
   } catch (err) {
     console.error(err.message)
@@ -85,8 +92,7 @@ router.get("/", async (req, res) => {
 // Get single website
 router.get("/:id", async (req, res) => {
   try {
-    // FIX: Populate owner when fetching a single website
-    const website = await Website.findById(req.params.id).populate("plan").populate({ path: "owner", select: "-password"}) 
+    const website = await Website.findById(req.params.id).populate("plan").populate({ path: "owner", select: "-password" })
     if (!website) {
       return res.status(404).json({ message: "Website not found." })
     }
@@ -109,10 +115,13 @@ router.put("/:id", authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this website." })
     }
 
-    const website = await Website.findById(websiteId).populate("plan").populate({ path: "owner", select: "-password"}) 
+    const website = await Website.findById(websiteId)
     if (!website) {
       return res.status(404).json({ message: "Website not found." })
     }
+
+    // Store the old link to check for changes
+    const oldLink = website.link
 
     website.name = name || website.name
     website.link = link || website.link
@@ -123,7 +132,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
     }
 
     await website.save()
-    res.json({ website })
+
+    // If the link was changed, update the allowed origins set
+    if (oldLink !== website.link) {
+      replaceAllowedOrigin(oldLink, website.link)
+    }
+
+    const updatedWebsite = await Website.findById(websiteId).populate("plan").populate({ path: "owner", select: "-password" })
+    res.json({ website: updatedWebsite })
   } catch (err) {
     console.error(err.message)
     res.status(500).send("Server Error")
@@ -147,6 +163,9 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Website not found." })
     }
 
+    // Store the link before deleting the website
+    const linkToRemove = website.link
+
     // Delete associated data
     await Chat.deleteMany({ website: websiteId })
     await Staff.deleteMany({ website: websiteId })
@@ -156,6 +175,10 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     await user.save()
 
     await website.deleteOne()
+
+    // Remove the website's domain from the allowed origins
+    removeAllowedOrigin(linkToRemove)
+
     res.json({ message: "Website deleted successfully." })
   } catch (err) {
     console.error(err.message)

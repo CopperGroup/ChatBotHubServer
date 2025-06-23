@@ -17,9 +17,25 @@ dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
+
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(async () => {console.log("MongoDB connected"), await initAllowedOrigins();})
+  .catch((err) => console.error(err))
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin)) {
+          callback(null, true);
+        } else {
+          console.warn(`🚫 Blocked origin: ${origin}`);
+          callback(new Error("Origin not allowed by CORS"));
+        }
+    },      
     methods: ["GET", "POST"]
   },
 })
@@ -29,13 +45,6 @@ app.use(cors())
 app.use(express.json())
 
 // MongoDB connection
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error(err))
 
 app.use("/api/users", userRoutes)
 app.use("/api/transactions", transactionRoutes) // Mount new transaction routes
