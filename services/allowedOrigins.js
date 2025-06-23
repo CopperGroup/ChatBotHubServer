@@ -1,4 +1,4 @@
-import Website from "./models/website.js"; // adjust path as needed
+import Website from "../models/website.js"; // adjust path as needed
 
 export const allowedOrigins = new Set();
 
