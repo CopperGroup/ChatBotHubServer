@@ -4,19 +4,22 @@ import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Added password field
+    password: { type: String, required: true },
     websites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
-    preferences: { // Added preferences field
-        type: mongoose.Schema.Types.Mixed, // Use Mixed for flexible JSON structure
+    preferences: {
+        type: mongoose.Schema.Types.Mixed,
         default: {
-          telegram: false,
-          toasts: true,
-          sound: true,
-          telegramBotSetUp: false
+            telegram: false,
+            toasts: true,
+            sound: true,
+            telegramBotSetUp: false
         },
     },
-    transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }], // Added transactions field
-}, { timestamps: true }); // timestamps adds createdAt and updatedAt
+    transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
+    // New fields for password reset
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+}, { timestamps: true });
 
 // Pre-save hook to hash password before saving
 userSchema.pre('save', async function(next) {

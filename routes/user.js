@@ -5,6 +5,7 @@ import User from '../models/user.js'; // Updated User model
 import Website from '../models/website.js'; // Assuming Website model is correctly imported
 import Plan from '../models/plan.js';     // Assuming Plan model is correctly imported
 import authMiddleware from '../middleware/auth.js'; // Import the authentication middleware
+import { changePasswordLinkEmail } from '../services/email.js';
 
 const router = express.Router();
 
@@ -165,6 +166,90 @@ router.put('/:userId/preferences', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
+    }
+});
+
+
+// @route   POST /api/users/forgot-password
+// @desc    Request a password reset link (send email)
+// @access  Public
+const RESET_PASSWORD_SECRET = process.env.RESET_PASSWORD_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL;
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        // If user not found, still return success to prevent email enumeration
+        if (!user) {
+            return res.status(200).json({ message: 'If a user with that email exists, a password reset link has been sent.' });
+        }
+
+        // Generate a unique token for password reset
+        const resetToken = jwt.sign({ id: user._id.toString() }, RESET_PASSWORD_SECRET, { expiresIn: '1h' }); // Token valid for 1 hour
+
+        // Store the token and its expiration in the user document
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour from now (in milliseconds)
+        await user.save();
+
+        // Construct the reset link for the frontend
+        const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+        // Send the email with the reset link
+        await changePasswordLinkEmail(user.email, resetLink);
+
+        res.status(200).json({ message: 'If a user with that email exists, a password reset link has been sent.' });
+
+    } catch (err) {
+        console.error('Error in forgot-password:', err.message);
+        res.status(500).json({ message: 'Server Error. Could not send password reset email.' });
+    }
+});
+
+// @route   POST /api/users/reset-password
+// @desc    Reset user's password using the token
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    try {
+        // Basic validation for new password
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, RESET_PASSWORD_SECRET);
+        } catch (err) {
+            return res.status(400).json({ message: 'Invalid or expired password reset token.' });
+        }
+
+        // Find the user by the ID from the token and check the token's validity in the database
+        const user = await User.findOne({
+            _id: decoded.id,
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() } // Token has not expired
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired password reset token.' });
+        }
+
+        // Update the user's password (pre-save hook will hash it)
+        user.password = newPassword;
+        user.resetPasswordToken = undefined; // Clear the token
+        user.resetPasswordExpires = undefined; // Clear the expiration
+        await user.save();
+
+        res.status(200).json({ message: 'Your password has been successfully reset.' });
+
+    } catch (err) {
+        console.error('Error in reset-password:', err.message);
+        res.status(500).json({ message: 'Server Error. Could not reset password.' });
     }
 });
 
