@@ -6,10 +6,13 @@ import Website from '../models/website.js'; // Assuming Website model is correct
 import Plan from '../models/plan.js';     // Assuming Plan model is correctly imported
 import authMiddleware from '../middleware/auth.js'; // Import the authentication middleware
 import { changePasswordLinkEmail } from '../services/email.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_here'; // Use a strong key from .env
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // @route   POST /api/users/register
 // @desc    Register a new user

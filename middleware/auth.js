@@ -1,8 +1,11 @@
 // middleware/auth.js
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Ensure you set a strong, secret key in your .env file
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_here'; // USE A STRONG KEY IN PRODUCTION
+const JWT_SECRET = process.env.JWT_SECRET
 
 const authMiddleware = (req, res, next) => {
     // Get token from header (commonly 'x-auth-token' or 'Authorization: Bearer <token>')
@@ -22,6 +25,7 @@ const authMiddleware = (req, res, next) => {
         next();
     } catch (err) {
         res.status(401).json({ message: 'Token is not valid' });
+        console.log("Decoding error", err.message)
     }
 };
 

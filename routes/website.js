@@ -105,7 +105,7 @@ router.get("/:id", async (req, res) => {
 
 // Update website
 router.put("/:id", authMiddleware, async (req, res) => {
-  const { name, link, description, preferences, userId } = req.body
+  const { name, link, description, preferences, language, userId } = req.body
   const websiteId = req.params.id
 
   try {
@@ -126,6 +126,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
     website.name = name || website.name
     website.link = link || website.link
     website.description = description || website.description
+    website.language = language || website.language
 
     if (preferences) {
       website.preferences = { ...website.preferences, ...preferences }

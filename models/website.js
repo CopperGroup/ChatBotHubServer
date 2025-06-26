@@ -18,6 +18,7 @@ const websiteSchema = new mongoose.Schema({
             },
             header: 'Chat Support',
             allowAIResponses: false,
+            language: "en",
             // ADDED: New path preferences
             allowedPaths: [],   // Array of strings, e.g., ['/', '/contact', '/products']
             disallowedPaths: [], // Array of strings, e.g., ['/admin', '/checkout']
