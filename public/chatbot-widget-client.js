@@ -68,6 +68,8 @@
         }
     }
 
+    waitForWidgetAndCheck()
+
     // Listen for back/forward navigation
     window.addEventListener('popstate', () => {
         console.log("[Chatbot] popstate detected");
