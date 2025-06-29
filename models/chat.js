@@ -6,8 +6,10 @@ const chatSchema = new mongoose.Schema({
     status: { type: String, enum: ['open', 'closed'], default: 'open' },
     messages: { type: String, default: '[]' }, // stored as JSON string
     aiResponsesEnabled: { type: Boolean, default: true },
-    // NEW FIELD: Reference to the Staff member leading this chat
-    leadingStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', default: null } // Optional, can be null
-}, { timestamps: true }); // This option automatically adds createdAt and updatedAt fields
+    leadingStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', default: null },
+    currentWorkflowBlockId: { type: String },
+    // NEW FIELD: Reference to the parent Website
+    website: { type: mongoose.Schema.Types.ObjectId, ref: 'Website', required: true } // Added this line
+}, { timestamps: true });
 
 export default mongoose.model('Chat', chatSchema);

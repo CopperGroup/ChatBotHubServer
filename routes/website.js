@@ -105,12 +105,13 @@ router.get("/:id", async (req, res) => {
 
 // Update website
 router.put("/:id", authMiddleware, async (req, res) => {
-  const { name, link, description, preferences, language, userId } = req.body
+  const { name, link, description, preferences, language, userId, predefinedAnswers} = req.body
   const websiteId = req.params.id
 
   try {
     // Verify ownership
     const user = await User.findById(userId)
+    console.log(user)
     if (!user || !user.websites.includes(websiteId)) {
       return res.status(403).json({ message: "Not authorized to update this website." })
     }
@@ -125,6 +126,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
     website.name = name || website.name
     website.link = link || website.link
+    website.predefinedAnswers = predefinedAnswers || website.predefinedAnswers
     website.description = description || website.description
     website.language = language || website.language
 

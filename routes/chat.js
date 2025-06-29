@@ -1,8 +1,8 @@
 import express from 'express';
 import Chat from '../models/chat.js';
 import Website from '../models/website.js';
-import User from '../models/user.js'; // Assuming this import path
-import Staff from '../models/staff.js'; // Import Staff model for validation
+import User from '../models/user.js';
+import Staff from '../models/staff.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -10,7 +10,6 @@ const router = express.Router();
 // Get chats for a website and email (used by the widget)
 router.get('/:chatbotCode/:email', async (req, res) => {
     try {
-        // Populating leadingStaff here for the widget might not be necessary, adjust if needed
         const website = await Website.findOne({ chatbotCode: req.params.chatbotCode }).populate('chats');
 
         if (!website) {
@@ -26,8 +25,10 @@ router.get('/:chatbotCode/:email', async (req, res) => {
 // Get a single chat by ID
 router.get('/:chatId', async (req, res) => {
     try {
-        // Populate leadingStaff when fetching a single chat for detailed view
-        const chat = await Chat.findById(req.params.chatId).populate({ path: 'leadingStaff', select: "-password"});
+        // Populate leadingStaff AND website when fetching a single chat for detailed view
+        const chat = await Chat.findById(req.params.chatId)
+                                .populate({ path: 'leadingStaff', select: "-password"})
+                                .populate('website'); // ADDED: populate website here
         if (!chat) {
             return res.status(404).json({ message: 'Chat not found' });
         }
@@ -42,26 +43,22 @@ router.get('/owner/:userId/:websiteId', authMiddleware, async (req, res) => {
     try {
         const { userId, websiteId } = req.params;
 
-        // Verify if the user exists and owns this website
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Ensure the website belongs to this user
         if (!user.websites.includes(websiteId)) {
             return res.status(403).json({ message: 'Access denied: Website does not belong to this user.' });
         }
 
         const website = await Website.findById(websiteId).populate({
             path: 'chats',
-            // Populate leadingStaff within the chats array for the owner dashboard
-            populate: {
-                path: 'leadingStaff',
-                model: 'Staff',
-                select: "-password"
-            },
-            options: { sort: { 'createdAt': -1 } } // Sort chats by creation date (newest first)
+            populate: [ // Use an array for multiple populates on a sub-path
+                { path: 'leadingStaff', model: 'Staff', select: "-password" },
+                { path: 'website', model: 'Website', select: 'chatbotCode name' } // Populate website info for each chat if needed
+            ],
+            options: { sort: { 'createdAt': -1 } }
         });
 
         if (!website) {
@@ -74,24 +71,24 @@ router.get('/owner/:userId/:websiteId', authMiddleware, async (req, res) => {
     }
 });
 
-// Create a new chat (adjusted to also include aiResponsesEnabled in default)
+// Create a new chat
 router.post('/', async (req, res) => {
     const { chatbotCode, email } = req.body;
     try {
+        const website = await Website.findOne({ chatbotCode });
+        if (!website) {
+            return res.status(404).json({ message: 'Website not found' });
+        }
+
         const newChat = new Chat({
-            name: 'New Chat',
+            name: 'New Conversation', // Changed from 'New Chat' to match workflow default
             email,
-            messages: JSON.stringify([]), // Ensure messages are an empty array string
-            aiResponsesEnabled: true // Default to true for new chats
+            messages: JSON.stringify([]),
+            aiResponsesEnabled: true,
+            website: website._id // ADDED: Save the website ID here
         });
         await newChat.save();
 
-        const website = await Website.findOne({ chatbotCode });
-        if (!website) {
-            // If website not found, delete the newly created chat to prevent orphans
-            await Chat.findByIdAndDelete(newChat._id);
-            return res.status(404).json({ message: 'Website not found' });
-        }
         website.chats.push(newChat._id);
         await website.save();
 
@@ -157,7 +154,7 @@ router.put('/:chatId/toggle-ai-responses', authMiddleware, async (req, res) => {
 // NEW ROUTE: Assign a staff member to a chat
 router.put('/:chatId/assign-staff', authMiddleware, async (req, res) => {
     const { chatId } = req.params;
-    const { staffId } = req.body; // Expect the ID of the staff member to assign
+    const { staffId } = req.body;
 
     try {
         const chat = await Chat.findById(chatId);
@@ -170,9 +167,8 @@ router.put('/:chatId/assign-staff', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Staff member not found.' });
         }
 
-        // Optional: Validate that the staff member belongs to the same website as the chat
         // Fetch website of the chat
-        const chatWebsite = await Website.findById(chat.website);
+        const chatWebsite = await Website.findById(chat.website); // Now chat.website exists!
         if (!chatWebsite || staffMember.website.toString() !== chatWebsite._id.toString()) {
             return res.status(403).json({ message: 'Staff member is not associated with this website.' });
         }
@@ -182,7 +178,7 @@ router.put('/:chatId/assign-staff', authMiddleware, async (req, res) => {
 
         res.status(200).json({
             message: `Staff member ${staffMember.name} assigned to chat ${chatId}.`,
-            leadingStaff: staffMember // Return the assigned staff member details if needed by client
+            leadingStaff: staffMember
         });
 
     } catch (err) {
@@ -201,12 +197,7 @@ router.put('/:chatId/unassign-staff', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Chat not found.' });
         }
 
-        // Optional: Authorization check to ensure only assigned staff or owner can unassign
-        // if (chat.leadingStaff && chat.leadingStaff.toString() !== req.user.id && chatWebsite.owner.toString() !== req.user.id) {
-        //      return res.status(403).json({ message: 'Not authorized to unassign staff from this chat.' });
-        // }
-
-        chat.leadingStaff = null; // Set to null to unassign
+        chat.leadingStaff = null;
         await chat.save();
 
         res.status(200).json({
@@ -225,26 +216,22 @@ router.get("/staff/:staffId/:websiteId", authMiddleware, async (req, res) => {
     try {
         const { staffId, websiteId } = req.params
 
-        // Verify if the staff member exists and is assigned to this website
         const staff = await Staff.findById(staffId)
         if (!staff) {
             return res.status(404).json({ message: "Staff member not found" })
         }
 
-        // Ensure the staff member is assigned to this website
         if (staff.website.toString() !== websiteId) {
             return res.status(403).json({ message: "Access denied: Staff member not assigned to this website." })
         }
 
         const website = await Website.findById(websiteId).populate({
             path: "chats",
-            // Populate leadingStaff within the chats array for the staff dashboard
-            populate: {
-                path: 'leadingStaff',
-                model: 'Staff',
-                select: "-password"
-            },
-            options: { sort: { createdAt: -1 } }, // Sort chats by creation date (newest first)
+            populate: [
+                { path: 'leadingStaff', model: 'Staff', select: "-password" },
+                { path: 'website', model: 'Website', select: 'chatbotCode name' } // Populate website info for each chat if needed
+            ],
+            options: { sort: { createdAt: -1 } },
         })
 
         if (!website) {
@@ -260,16 +247,15 @@ router.get("/staff/:staffId/:websiteId", authMiddleware, async (req, res) => {
 // NEW ROUTE: Get a list of chats from an array of chat IDs
 router.post('/get-by-ids', authMiddleware, async (req, res) => {
     try {
-        const { chatIds } = req.body; // Expect an array of chat IDs in the request body
+        const { chatIds } = req.body;
 
-        // Validate that chatIds is an array and not empty
         if (!Array.isArray(chatIds) || chatIds.length === 0) {
             return res.status(400).json({ message: 'Invalid input: chatIds must be a non-empty array.' });
         }
 
-        // Use $in operator to find all chats whose _id is in the provided chatIds array
-        // Populate leadingStaff for these chats
-        const chats = await Chat.find({ _id: { $in: chatIds } }).select("_id messages status")
+        const chats = await Chat.find({ _id: { $in: chatIds } })
+                                .select("_id messages status")
+                                .populate('website'); // ADDED: Populate website when fetching by IDs too
 
         res.status(200).json(chats);
     } catch (err) {

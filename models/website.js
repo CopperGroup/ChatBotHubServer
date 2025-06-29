@@ -4,7 +4,7 @@ const websiteSchema = new mongoose.Schema({
     name: { type: String, required: true },
     link: { type: String, required: true },
     description: { type: String },
-    predefinedAnswers: { type: String, default: '[]' }, // JSON string
+    predefinedAnswers: { type: String, default: '{"blocks":[{"id":"start","type":"start","name":"Start","message":"Hi! What is your name?","description":"Collect user name.","position":{"x":69,"y":66},"connections":{"output":[]}},{"id":"userResponse1","type":"userResponse","name":"User Response","message":"","description":"Receive user response","position":{"x":520.3999938964844,"y":171.19998168945312},"connections":{"output":[]}},{"id":"end1","type":"end","name":"End","message":"Thank you, please wait for the agent to contact you","description":"End qualification and notify staff","position":{"x":931.3999938964844,"y":285.1999816894531},"connections":{}}],"connections":[{"id":"start-userResponse1--1751194193584","from":"start","to":"userResponse1","fromType":"output","toType":"input"},{"id":"userResponse1-end1--1751194203295","from":"userResponse1","to":"end1","fromType":"output","toType":"input"}],"metadata":{"websiteId":"685d76972d08a290586bc531","createdAt":"2025-06-29T10:56:22.587Z","version":"1.0"}}' }, // JSON string
     chatbotCode: { type: String, required: true, unique: true },
     chats: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }],
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },

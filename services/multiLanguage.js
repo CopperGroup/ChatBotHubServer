@@ -159,7 +159,7 @@ const multiLanguage = {
     },
     "Live Chat": {
         en: "Live Chat",
-        uk: "Онлайн чат", // Changed from "Живий чат" to "Онлайн чат" for better accuracy
+        uk: "Онлайн чат",
         pl: "Czat na żywo",
         fr: "Chat en direct",
         de: "Live-Chat",
@@ -313,6 +313,18 @@ const multiLanguage = {
         ro: "Această conversație a fost închisă.",
         fi: "Tämä keskustelu on suljettu."
     },
+    "Hi! What is your name?": {
+        "en": "Hi! What is your name?",
+        "uk": "Привіт! Як вас звати?",
+        "pl": "Cześć! Jak masz na imię?",
+        "fr": "Salut ! Comment tu t'appelles ?",
+        "de": "Hallo! Wie heißt du?",
+        "es": "¡Hola! ¿Cómo te llamas?",
+        "it": "Ciao! Come ti chiami?",
+        "pt": "Oi! Qual é o seu nome?",
+        "ro": "Salut! Cum te numești?",
+        "fi": "Hei! Mikä sinun nimesi on?"
+    },
     "open": {
         en: "OPEN",
         uk: "ВІДКРИТИ",
@@ -336,8 +348,20 @@ const multiLanguage = {
         pt: "FECHADO",
         ro: "ÎNCHIS",
         fi: "SULJETTU"
+    },
+    // NEW TEXT ELEMENT
+    "Please choose an option to continue.": {
+        en: "Please choose an option to continue.",
+        uk: "Будь ласка, виберіть варіант для продовження.",
+        pl: "Proszę wybrać opcję, aby kontynuować.",
+        fr: "Veuillez choisir une option pour continuer.",
+        de: "Bitte wählen Sie eine Option, um fortzufahren.",
+        es: "Por favor, elige una opción para continuar.",
+        it: "Per favore, scegli un'opzione per continuare.",
+        pt: "Por favor, escolha uma opção para continuar.",
+        ro: "Vă rugăm să alegeți o opțiune pentru a continua.",
+        fi: "Ole hyvä ja valitse vaihtoehto jatkaaksesi."
     }
-
 };
 
 export default multiLanguage;

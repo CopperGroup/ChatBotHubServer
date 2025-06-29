@@ -4,6 +4,10 @@ import Website from "./models/website.js"
 import User from "./models/user.js"
 import { PlanValidator } from "./services/plan-validator.js"
 import Staff from "./models/staff.js" // Import the Staff model
+import multiLanguage from "./services/multiLanguage.js"
+// Import the new workflow service functions
+import { getInitialWorkflowMessage, processWorkflowBlock, advanceWorkflow, getBlockById, getNextBlocks } from "./services/workflow-service.js";
+
 
 const AI_URL = process.env.AI_URL
 // Helper function to send Telegram notifications via webhook
@@ -51,6 +55,7 @@ export function handleSocket(socket, io) {
 
 
     socket.on("new_staff_added", async ({ websiteId, newStaff }) => {
+        console.log(`SERVER EVENT: Received 'new_staff_added' for website ${websiteId}.`);
         try {
             const website = await Website.findById(websiteId).populate('owner');
             if (!website) return;
@@ -173,10 +178,6 @@ export function handleSocket(socket, io) {
                 socket.broadcast.to(`staff_${website._id}`).emit("new_message", dashboardBroadcastPayload);
                 console.log(`SERVER DEBUG: Broadcasted 'new_message' to other staff instances in room staff_${website._id}.`);
 
-                // REMOVED: Telegram notification for dashboard_message (staff/owner replies)
-                // It should only trigger for user messages from the widget.
-
-                console.log(`SERVER DEBUG: Dashboard/Staff message handled successfully for chat_${chatId}.`);
             } catch (error) {
                 console.error(`SERVER ERROR: Error handling dashboard message for chat ${chatId}:`, error);
             }
@@ -525,21 +526,24 @@ export function handleSocket(socket, io) {
 
             socket.on("create_new_chat", async (data) => {
                 const { email } = data
-                console.log(`SERVER DEBUG: Received 'create_new_chat' from Widget (Socket ID: ${socket.id}). Email: ${email}.`);
+                // Declare newChat here with `let` so it's accessible throughout the try/catch
+                let newChat; 
+                console.log(`SERVER EVENT: Received 'create_new_chat' from Widget (Socket ID: ${socket.id}). Email: ${email}.`);
 
                 try {
                     const aiValidation = await PlanValidator.validateAIUsage(website._id)
 
-                    const newChat = new Chat({
+                    newChat = new Chat({ // Assign to the `let` declared variable
                         chatbotCode,
                         email,
                         website: website._id,
                         name: "New Conversation",
                         status: "open",
                         aiResponsesEnabled: aiValidation.planAllowsAI && aiValidation.isValid,
+                        currentWorkflowBlockId: "start" // Initialize workflow at the start block
                     })
                     await newChat.save()
-                    console.log(`SERVER DEBUG: New chat ${newChat._id} created in DB. AI enabled: ${newChat.aiResponsesEnabled}.`);
+                    console.log(`SERVER DEBUG: New chat ${newChat._id} created in DB. AI enabled: ${newChat.aiResponsesEnabled}. Initial workflow block ID set to 'start'.`);
 
                     website.chats.push(newChat._id)
                     await website.save()
@@ -554,35 +558,85 @@ export function handleSocket(socket, io) {
                     socket.join(`chat_${newChat._id}`)
                     console.log(`SERVER DEBUG: Widget client ${socket.id} joined new chat room: chat_${newChat._id}. Current rooms: ${Array.from(socket.rooms).join(', ')}`);
 
-
                     socket.emit("new_chat_data", { chat: newChat })
                     console.log(`SERVER DEBUG: Emitted 'new_chat_data' to originating widget for chat: ${newChat._id}.`);
 
-                    let initialBotMessageText
-                    if (newChat.aiResponsesEnabled && website.preferences?.allowAIResponses) {
-                        initialBotMessageText = `Hi! What is your name?`
+                    let initialBotMessageText;
+                    let initialBotMessageOptions = [];
+                    let nextWorkflowPositionAfterStart = "start"; // Default to 'start'
+
+                    // Parse the workflow JSON from website.predefinedAnswers
+                    let workflowData = {};
+                    try {
+                        if (website.predefinedAnswers) {
+                            workflowData = JSON.parse(website.predefinedAnswers);
+                            console.log("SERVER DEBUG: Parsed workflow data from website.predefinedAnswers.");
+                        } else {
+                            console.log("SERVER DEBUG: website.predefinedAnswers is empty or null.");
+                        }
+                    } catch (parseError) {
+                        console.error("SERVER ERROR: Failed to parse website.predefinedAnswers JSON for workflow execution:", parseError);
+                        workflowData = null; // Set to null to trigger fallback
+                    }
+
+                    // --- Initial Bot Message Logic (Only 'start' block message, then set currentWorkflowBlockId to 'userResponse1') ---
+                    if (workflowData && Object.keys(workflowData).length > 0) {
+                        console.log("SERVER DEBUG: Workflow data available. Preparing initial 'start' message.");
+                        const startBlock = getBlockById(workflowData, 'start');
+                        if (startBlock) {
+                            const startMessageResponse = processWorkflowBlock(startBlock, ""); // Get the start message
+                            initialBotMessageText = startMessageResponse.message;
+
+                            // Determine the *next* block to point to after the initial "start" message is sent.
+                            // This should be the first block that requires user interaction after the start message.
+                            const nextBlocksFromStart = getNextBlocks(workflowData, startBlock.id, startBlock.type); 
+                            if (nextBlocksFromStart.length > 0) {
+                                nextWorkflowPositionAfterStart = nextBlocksFromStart[0].id; // This should be 'userResponse1'
+                                console.log(`SERVER DEBUG: Initial workflow message is from 'start'. Next expected workflow position for user response: ${nextWorkflowPositionAfterStart}`);
+                            } else {
+                                console.warn("SERVER WARN: 'start' block has no outgoing connections. Workflow will end after initial greeting.");
+                                newChat.status = 'open'; // Keep chat open
+                                nextWorkflowPositionAfterStart = startBlock.id; // Stay at start (or consider it implicitly ended)
+                            }
+                        } else {
+                            console.warn("SERVER WARN: 'start' block not found in workflow. Falling back to multiLanguage default.");
+                            initialBotMessageText = multiLanguage[`Hi! What is your name?`][website.preferences.language || "en"];
+                            nextWorkflowPositionAfterStart = null; // No workflow to track
+                        }
                     } else {
-                        initialBotMessageText = `Welcome! AI responses are currently disabled for this chat. Please provide your name, and a human agent will assist you shortly.`
+                        console.log("SERVER DEBUG: No valid workflow data found. Falling back to multiLanguage default for initial message.");
+                        initialBotMessageText = multiLanguage[`Hi! What is your name?`][website.preferences.language || "en"];
+                        nextWorkflowPositionAfterStart = null; // No workflow to track
                     }
 
                     // *** TYPING INDICATOR LOGIC FOR INITIAL BOT MESSAGE ***
-                    socket.emit("bot_typing_start"); // Bot is preparing response
-                    
+                    socket.emit("bot_typing_start");
                     console.log(`SERVER DEBUG: Emitted 'bot_typing_start' for initial bot message.`);
                     // *******************************************************
 
-                    const initialBotMessage = { sender: "bot", text: initialBotMessageText, timestamp: new Date().toISOString() }
+                    const initialBotMessage = {
+                        sender: "bot",
+                        text: initialBotMessageText,
+                        timestamp: new Date().toISOString(),
+                        options: initialBotMessageOptions // This will be empty for the first message
+                    };
 
                     const messages = JSON.parse(newChat.messages || "[]")
                     messages.push(initialBotMessage)
-                    await Chat.findByIdAndUpdate(newChat._id, { messages: JSON.stringify(messages) })
-                    console.log(`SERVER DEBUG: Initial bot message saved to DB for chat ${newChat._id}.`);
+                    
+                    newChat.currentWorkflowBlockId = nextWorkflowPositionAfterStart; // Update the chat's workflow ID
+                    await Chat.findByIdAndUpdate(newChat._id, {
+                        messages: JSON.stringify(messages),
+                        currentWorkflowBlockId: newChat.currentWorkflowBlockId,
+                        status: newChat.status // Ensure status is saved
+                    });
+                    console.log(`SERVER DEBUG: Initial bot message and workflow state saved to DB for chat ${newChat._id}. Current workflow block ID: ${newChat.currentWorkflowBlockId}. Chat status: ${newChat.status}.`);
 
-                    socket.emit("reply", { text: initialBotMessageText, sender: "bot", timestamp: initialBotMessage.timestamp })
-                    console.log(`SERVER DEBUG: Emitted initial 'reply' to widget for chat: ${newChat._id}. Sender: bot.`);
+                    socket.emit("reply", { text: initialBotMessageText, sender: "bot", timestamp: initialBotMessage.timestamp, options: initialBotMessageOptions})
+                    console.log(`SERVER DEBUG: Emitted initial 'reply' to widget for chat: ${newChat._id}. Sender: bot. Options: ${JSON.stringify(initialBotMessageOptions)}.`);
 
                     // *** TYPING INDICATOR LOGIC FOR INITIAL BOT MESSAGE ***
-                    socket.emit("bot_typing_stop"); // Bot has sent response
+                    socket.emit("bot_typing_stop");
                     console.log(`SERVER DEBUG: Emitted 'bot_typing_stop' after initial bot message.`);
                     // *******************************************************
 
@@ -597,6 +651,7 @@ export function handleSocket(socket, io) {
                                 updatedAt: new Date().toISOString(),
                                 messages: JSON.stringify(messages),
                                 aiResponsesEnabled: newChat.aiResponsesEnabled,
+                                currentWorkflowBlockId: newChat.currentWorkflowBlockId
                             },
                             websiteName: website.name,
                         };
@@ -611,6 +666,7 @@ export function handleSocket(socket, io) {
                             botResponse: initialBotMessage,
                             websiteCreditCount: website.creditCount,
                         });
+                        console.log(`SERVER DEBUG: Notified owner dashboard about initial bot message for new chat ${newChat._id}.`);
                     }
 
                     io.to(`staff_${website._id}`).emit("new_chat", {
@@ -623,6 +679,7 @@ export function handleSocket(socket, io) {
                             updatedAt: new Date().toISOString(),
                             messages: JSON.stringify(messages),
                             aiResponsesEnabled: newChat.aiResponsesEnabled,
+                            currentWorkflowBlockId: newChat.currentWorkflowBlockId
                         },
                         websiteName: website.name,
                     });
@@ -640,13 +697,13 @@ export function handleSocket(socket, io) {
 
                 } catch (error) {
                     console.error("SERVER ERROR: Error in create_new_chat handler:", error)
-                    socket.emit("reply", { text: "Error starting new conversation.", sender: "bot", timestamp: new Date().toISOString(), chatId: newChat._id})
+                    socket.emit("reply", { text: "Error starting new conversation.", sender: "bot", timestamp: new Date().toISOString(), chatId: newChat?._id || "unknown"})
                     socket.emit("bot_typing_stop")
                 }
             })
 
             socket.on("join_chat", async ({ chatId }) => {
-                console.log(`SERVER DEBUG: Received 'join_chat' from Widget (Socket ID: ${socket.id}). Chat ID: ${chatId}.`);
+                console.log(`SERVER EVENT: Received 'join_chat' from Widget (Socket ID: ${socket.id}). Chat ID: ${chatId}.`);
                 const rooms = Array.from(socket.rooms)
                 rooms.forEach((room) => {
                     if (room.startsWith("chat_")) {
@@ -660,7 +717,7 @@ export function handleSocket(socket, io) {
 
             socket.on("message", async ({ chatId, email, message, currentWebsiteURL: clientUrlFromMessage }) => {
                 console.log(
-                    `SERVER DEBUG: Received 'message' from Widget (Socket ID: ${socket.id}). Chat ID: ${chatId}. Text: "${message}". Email: ${email}. URL: ${clientUrlFromMessage || "N/A"}.`,
+                    `SERVER EVENT: Received 'message' from Widget (Socket ID: ${socket.id}). Chat ID: ${chatId}. Text: "${message}". Email: ${email}. URL: ${clientUrlFromMessage || "N/A"}.`,
                 )
 
                 try {
@@ -673,8 +730,8 @@ export function handleSocket(socket, io) {
 
                     // Ensure widget is in the correct room, even if it wasn't on initial connect for some reason
                     if (!Array.from(socket.rooms).includes(`chat_${chatId}`)) {
-                           socket.join(`chat_${chatId}`);
-                           console.log(`SERVER DEBUG: Widget client ${socket.id} forcefully joined chat room: chat_${chatId} on message. Current rooms: ${Array.from(socket.rooms).join(', ')}`);
+                            socket.join(`chat_${chatId}`);
+                            console.log(`SERVER DEBUG: Widget client ${socket.id} forcefully joined chat room: chat_${chatId} on message. Current rooms: ${Array.from(socket.rooms).join(', ')}`);
                     }
 
 
@@ -685,35 +742,128 @@ export function handleSocket(socket, io) {
                         text: message,
                         timestamp: new Date().toISOString(),
                         url: clientUrlFromMessage,
+                        silent: !chat.currentWorkflowBlockId.includes("end")
+                        
                     }
                     messages.push(userMessage)
+                    console.log(`SERVER DEBUG: User message added to chat history for chat ${chatId}: "${userMessage.text}".`);
 
                     let botResponseText = null
                     let senderTypeForResponse = "bot"
                     let botMessage = null;
+                    let workflowHandled = false; // Flag to indicate if workflow handled the message
+                    let nextWorkflowBlockToSave = chat.currentWorkflowBlockId; // Default to current workflow position
+                    let telegramNotificationNeeded = false; // Flag to send telegram notification
+                    let workflowPathEnded = false; // Flag to indicate if workflow path reached its end (like 'end' block or no more connections)
 
-                    if (messages.length === 2 && chat.name === "New Conversation") {
-                        chat.name = message
-                        botResponseText = `Thank you, ${message}! How can I help you today?`
-                        senderTypeForResponse = "bot"
-                        console.log(`SERVER DEBUG: Chat ${chatId} named: "${chat.name}".`);
-
-                        // *** TYPING INDICATOR LOGIC FOR NAMING RESPONSE ***
-                        socket.emit("bot_typing_start"); // Bot is preparing response
-                        console.log(`SERVER DEBUG: Emitted 'bot_typing_start' for naming response.`);
-                        // ****************************************************
-
+                    // Parse the workflow JSON from website.predefinedAnswers
+                    let workflowData = {};
+                    try {
+                        if (website.predefinedAnswers) {
+                            workflowData = JSON.parse(website.predefinedAnswers);
+                            console.log("SERVER DEBUG: Parsed workflow data from website.predefinedAnswers for message handling.");
+                        } else {
+                            console.log("SERVER DEBUG: website.predefinedAnswers is empty or null for message handling.");
+                        }
+                    } catch (parseError) {
+                        console.error("SERVER ERROR: Failed to parse website.predefinedAnswers JSON for workflow execution:", parseError);
+                        workflowData = null; // Set to null to trigger fallback
                     }
-                    else if (
-                        website.plan.allowAI &&
-                        website.creditCount > 0 &&
-                        chat.aiResponsesEnabled &&
-                        website.preferences && website.preferences.allowAIResponses
-                    ) {
-                        const isChatNamed = chat.name !== "New Conversation"
-                        if ((isChatNamed && messages.length >= 1) || messages.length > 2) {
+
+                    // --- Workflow Processing Logic ---
+                    if (workflowData && chat.currentWorkflowBlockId) {
+                        console.log(`SERVER FLOW: Attempting to advance workflow from block ID: ${chat.currentWorkflowBlockId} with user message: "${message}".`);
+                        const workflowAdvanceResult = advanceWorkflow(workflowData, chat.currentWorkflowBlockId, message, message); // Pass user's message as chosen option
+                        console.log(`SERVER FLOW: advanceWorkflow returned result:`, JSON.stringify(workflowAdvanceResult));
+                        
+                        if (workflowAdvanceResult.responses.length > 0) {
+                            let concatenatedMessage = "";
+                            let finalOptions = [];
+                            for (const res of workflowAdvanceResult.responses) {
+                                if (res.message !== null) { 
+                                    concatenatedMessage += (concatenatedMessage ? "\n" : "") + res.message;
+                                }
+                                if (res.options && res.options.length > 0) {
+                                    finalOptions = res.options; 
+                                }
+                                if (res.sendTelegramNotification) {
+                                    telegramNotificationNeeded = true;
+                                }
+                                if (res.endWorkflow) { // endWorkflow flag from workflow-service
+                                    workflowPathEnded = true; 
+                                    console.log(`SERVER FLOW: Workflow path reached 'end' block or final sequential block. WorkflowPathEnded set to true.`);
+                                }
+                            }
+
+                            if (concatenatedMessage || finalOptions.length > 0) {
+                                botResponseText = concatenatedMessage;
+                                botMessage = {
+                                    sender: "bot",
+                                    text: botResponseText,
+                                    timestamp: new Date().toISOString(),
+                                    options: finalOptions,
+                                };
+                                messages.push(botMessage);
+                                console.log(`SERVER FLOW: Workflow generated bot message: "${botMessage.text}" with options: ${JSON.stringify(botMessage.options)}.`);
+                            } else {
+                                console.log("SERVER FLOW: Workflow advanced internally but produced no user-facing message this turn.");
+                            }
+                            
+                            nextWorkflowBlockToSave = workflowAdvanceResult.nextWorkflowBlockId;
+                            console.log(`SERVER FLOW: Chat workflow position will be updated to: ${nextWorkflowBlockToSave}.`);
+                            
+                            workflowHandled = true; // Workflow processing occurred
+                        } else {
+                            console.log(`SERVER FLOW: Workflow did not yield any responses. Current block ID: ${chat.currentWorkflowBlockId}.`);
+                            // If workflow returns no responses but has a next block, update position without sending message
+                            if (workflowAdvanceResult.nextWorkflowBlockId && workflowAdvanceResult.nextWorkflowBlockId !== chat.currentWorkflowBlockId) {
+                                nextWorkflowBlockToSave = workflowAdvanceResult.nextWorkflowBlockId;
+                                console.log(`SERVER FLOW: Workflow advanced internally to ${nextWorkflowBlockToSave} but produced no user message this turn. Still considered handled.`);
+                                workflowHandled = true; // Still consider it handled by workflow if position updated
+                            }
+                        }
+                    } else {
+                        console.log(`SERVER FLOW: No active workflow (${chat.currentWorkflowBlockId}) or workflow data not found. Skipping workflow processing.`);
+                    }
+
+                    // --- AI / Default Fallback Logic ---
+                    // Engage AI if workflow processing is not enabled, or if it finished its defined path
+                    // and either didn't provide a visible message, or explicitly signaled workflow completion (end block).
+                    console.log(`SERVER AI FALLBACK DECISION:`);
+                    console.log(`  - workflowHandled: ${workflowHandled}`);
+                    console.log(`  - botMessage exists: ${botMessage !== null}`);
+                    console.log(`  - workflowPathEnded: ${workflowPathEnded}`);
+
+                    const triggerAIFallback = (!workflowHandled || (botMessage === null && workflowHandled)) || workflowPathEnded;
+
+                    if (triggerAIFallback) {
+                        console.log(`SERVER FALLBACK: Conditions for AI/Default fallback met. Proceeding with fallback logic.`);
+                        
+                        // Determine AI eligibility
+                        const aiAllowedPlan = website.plan.allowAI;
+                        const aiAllowedCredits = website.creditCount > 0;
+                        const aiAllowedChatEnabled = chat.aiResponsesEnabled;
+                        const aiAllowedWebsitePrefs = website.preferences?.allowAIResponses;
+                        const aiConditionsMet = aiAllowedPlan && aiAllowedCredits && aiAllowedChatEnabled && aiAllowedWebsitePrefs;
+
+                        console.log(`SERVER FALLBACK: AI eligibility details:`);
+                        console.log(`  - Plan allows AI: ${aiAllowedPlan}`);
+                        console.log(`  - Remaining Credits: ${website.creditCount} (sufficient: ${aiAllowedCredits})`);
+                        console.log(`  - Chat AI enabled: ${aiAllowedChatEnabled}`);
+                        console.log(`  - Website preferences allow AI: ${aiAllowedWebsitePrefs}`);
+                        console.log(`  - All AI conditions met: ${aiConditionsMet}`);
+
+                        if (messages.length === 2 && chat.name === "New Conversation" && !aiConditionsMet) {
+                            // This specifically handles the naming response if AI is NOT allowed
+                            // and the chat is still in its initial naming phase.
+                            chat.name = message;
+                            botResponseText = `Thank you, ${message}! How can I help you today?`;
+                            senderTypeForResponse = "bot";
+                            console.log(`SERVER DEBUG: Chat ${chatId} named: "${chat.name}" (fallback naming).`);
+                        } else if (aiConditionsMet) {
+                            console.log("SERVER DEBUG: Engaging AI for response.");
                             try {
-                                socket.emit("bot_typing_start") // This is already here for AI call
+                                socket.emit("bot_typing_start");
                                 console.log("SERVER DEBUG: Emitted 'bot_typing_start' for AI call.")
 
                                 console.log(`SERVER DEBUG: Calling AI service at ${AI_URL}/chat for chat ${chatId}...`)
@@ -725,71 +875,75 @@ export function handleSocket(socket, io) {
                                         chatId: chatId,
                                         prompt: message,
                                     }),
-                                })
+                                });
 
                                 if (aiResponse.ok) {
-                                    const aiData = await aiResponse.json()
-                                    console.log("SERVER DEBUG: AI Response Data:", aiData)
-                                    botResponseText = aiData.response
-                                    senderTypeForResponse = "ai"
-                                    website.creditCount -= 1
-                                    await website.save()
+                                    const aiData = await aiResponse.json();
+                                    console.log("SERVER DEBUG: AI Response Data:", aiData);
+                                    botResponseText = aiData.response;
+                                    senderTypeForResponse = "ai";
+                                    website.creditCount -= 1;
+                                    await website.save();
                                     console.log(`SERVER DEBUG: AI response received. Credits left: ${website.creditCount}.`);
                                 } else {
-                                    console.error(`SERVER ERROR: AI server responded with status: ${aiResponse.status} - ${aiResponse.statusText}.`)
+                                    console.error(`SERVER ERROR: AI server responded with status: ${aiResponse.status} - ${aiResponse.statusText}.`);
                                 }
                             } catch (aiError) {
-                                console.error("SERVER ERROR: Error communicating with AI server:", aiError)
+                                console.error("SERVER ERROR: Error communicating with AI server:", aiError);
                             } finally {
-                                socket.emit("bot_typing_stop") // Stays here for AI responses
-                                console.log("SERVER DEBUG: Emitted 'bot_typing_stop' after AI call.")
+                                socket.emit("bot_typing_stop");
+                                console.log("SERVER DEBUG: Emitted 'bot_typing_stop' after AI call.");
                             }
                         } else {
-                            console.log("SERVER DEBUG: AI not engaged due to message count threshold or name setting phase.")
+                            console.log("SERVER DEBUG: AI not engaged: All specific AI conditions failed. Sending generic fallback.");
+                        }
+
+                        // If botResponseText was determined by fallback, and no botMessage object yet, create it.
+                        // This handles cases where workflow might not have generated a message but AI fallback does.
+                        if (botResponseText && botMessage === null) { 
+                            botMessage = { sender: senderTypeForResponse, text: botResponseText, timestamp: new Date().toISOString() };
+                            messages.push(botMessage);
+                            console.log(`SERVER FALLBACK: Generated bot message: "${botMessage.text}" (sender: ${botMessage.sender}).`);
+                        } else if (botMessage !== null) {
+                            console.log(`SERVER FALLBACK: Bot message already exists from workflow. Not creating a new one from AI fallback.`);
+                        } else {
+                            console.log(`SERVER FALLBACK: No bot message generated even from fallback logic. This turn will be silent.`);
                         }
                     }
-                    else if (website.preferences && website.preferences.allowAIResponses === false) {
-                        console.log("SERVER DEBUG: AI not engaged: AI responses explicitly disabled via website preferences.");
-                        // ****************************************************************
-                    }
-                    else if (!website.plan.allowAI) {
-                        console.log("SERVER DEBUG: AI not engaged: Plan does not allow AI.")
-                        // *******************************************************************
-                    } else if (website.creditCount <= 0) {
-                        console.log("SERVER DEBUG: AI not engaged: Insufficient credits.")
-                        // ******************************************************************
-                    } else if (!chat.aiResponsesEnabled) {
-                        console.log("SERVER DEBUG: AI not engaged: AI responses explicitly disabled for this chat.")
-                        // ********************************************************************
+
+
+                    // --- Typing Indicator Handling ---
+                    if (botMessage) {
+                        socket.emit("bot_typing_start");
+                        console.log(`SERVER DEBUG: Emitted 'bot_typing_start' for bot message (type: ${botMessage.sender}).`);
+                        setTimeout(() => {
+                            socket.emit("bot_typing_stop");
+                            console.log(`SERVER DEBUG: Emitted 'bot_typing_stop' after sending botMessage.`);
+                        }, botMessage.sender === 'ai' ? 0 : 500);
                     } else {
-                        console.log("SERVER DEBUG: Default response sent (AI not active).")
-                        // **************************************************************
+                        socket.emit("bot_typing_stop");
+                        console.log(`SERVER DEBUG: Emitted 'bot_typing_stop' as no botMessage was generated.`);
                     }
 
-                    if (botResponseText) {
-                        botMessage = { sender: senderTypeForResponse, text: botResponseText, timestamp: new Date().toISOString() }
-                        messages.push(botMessage)
-                    }
-
+                    // --- Save Chat State and Emit Updates ---
+                    chat.currentWorkflowBlockId = nextWorkflowBlockToSave; // Update to the new position
                     await Chat.findByIdAndUpdate(chatId, {
                         messages: JSON.stringify(messages),
                         name: chat.name,
-                    })
-                    console.log(`SERVER DEBUG: Messages saved to DB for chat ${chatId}.`);
+                        currentWorkflowBlockId: chat.currentWorkflowBlockId,
+                        // DO NOT UPDATE chat.status based on endWorkflow here, as it's human-controlled now.
+                    });
+                    console.log(`SERVER DEBUG: Messages and workflow state saved to DB for chat ${chatId}. Final workflow position: ${chat.currentWorkflowBlockId}.`);
 
                     if (botMessage) {
-                        socket.emit("reply", { text: botMessage.text, sender: botMessage.sender, timestamp: botMessage.timestamp })
-                        console.log(`SERVER DEBUG: Emitted 'reply' to widget. Sender: ${botMessage.sender}. Text: "${botMessage.text}".`);
+                        socket.emit("reply", {
+                            text: botMessage.text,
+                            sender: botMessage.sender,
+                            timestamp: botMessage.timestamp,
+                            options: botMessage.options
+                        });
+                        console.log(`SERVER DEBUG: Emitted 'reply' to widget. Sender: ${botMessage.sender}. Text: "${botMessage.text}". Options: ${JSON.stringify(botMessage.options || [])}.`);
                     }
-
-                    // *** TYPING INDICATOR LOGIC FOR NON-AI BOT MESSAGES ***
-                    // Only stop typing if a bot message (AI or otherwise) was sent and it's not handled by AI's finally block
-                    if (botMessage && senderTypeForResponse !== "ai") { // If it's a botMessage AND NOT an AI response (AI has its own finally block)
-                        socket.emit("bot_typing_stop"); // Stop typing after bot reply
-                        console.log(`SERVER DEBUG: Emitted 'bot_typing_stop' after sending non-AI botMessage.`);
-                    }
-                    // *******************************************************
-
 
                     const messagePayload = {
                         chatId,
@@ -798,7 +952,8 @@ export function handleSocket(socket, io) {
                         chatName: chat.name,
                         botResponse: botMessage,
                         websiteCreditCount: website.creditCount,
-                        staffId: chat.leadingStaff ? chat.leadingStaff.toString() : ""
+                        staffId: chat.leadingStaff ? chat.leadingStaff.toString() : "",
+                        currentWorkflowBlockId: chat.currentWorkflowBlockId
                     };
 
                     if (websiteOwner) {
@@ -809,24 +964,24 @@ export function handleSocket(socket, io) {
                     io.to(`staff_${website._id}`).emit("new_message", messagePayload);
                     console.log(`SERVER DEBUG: Notified staff dashboards about user message and bot response for chat ${chatId}.`);
 
-                    // Send Telegram notification for new widget message to ALL staff
-                    // This notification will only be triggered for user messages from the widget
-                    if (userMessage) { // Ensure it's a message from the user/widget
+                    // Trigger Telegram notification if the flag is set during workflow processing
+                    if (telegramNotificationNeeded) {
                       const shouldNotifyOwnerTelegram = websiteOwner && websiteOwner.preferences && websiteOwner.preferences.telegram;
 
                       sendTelegramNotification({
-                          message: `New message from ${chat.name} on ${website.name}: "${userMessage.text}"`,
-                          websiteId: website._id.toString(), // Pass websiteId for context
-                          notifyOwner: shouldNotifyOwnerTelegram, // Dynamically set based on owner's preference
-                          ownerId: websiteOwner ? websiteOwner._id.toString() : null, // Pass owner's backend ID if available
-                          notifyAllStaff: true // Custom flag to notify all staff in the bot
+                          message: `Workflow completed for chat from ${chat.name} on ${website.name}. Agent assistance requested.`,
+                          websiteId: website._id.toString(),
+                          notifyOwner: shouldNotifyOwnerTelegram,
+                          ownerId: websiteOwner ? websiteOwner._id.toString() : null,
+                          notifyAllStaff: true // Notify all staff as this is a handoff
                       });
+                      console.log(`SERVER DEBUG: Telegram notification triggered due to workflow 'end' block.`);
                     }
 
 
                 } catch (error) {
                     console.error(`SERVER ERROR: Error handling message for chat ${chatId}:`, error)
-                    socket.emit("reply", { text: "Error processing your message.", sender: "bot", timestamp: new Date().toISOString() })
+                    socket.emit("reply", { text: "Error processing your message.", sender: "bot", timestamp: new Date().toISOString(), chatId: newChat?._id || "unknown"})
                     socket.emit("bot_typing_stop")
                 }
             })
