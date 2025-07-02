@@ -26,37 +26,66 @@
     // --- Core function to check path and toggle widget display ---
     function checkAndToggleWidget() {
         const currentPathname = window.location.pathname;
-        const allowed = injectedAllowedPaths;
-        const disallowed = injectedDisallowedPaths;
-        let shouldDisplayWidget = true;
-
-        // console.log("[Chatbot] Checking path:", currentPathname);
-
-        if (allowed.length > 0) {
-            shouldDisplayWidget = allowed.some(path => {
-                return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
-            });
-
-            if (!shouldDisplayWidget) {
-                // console.warn("[Chatbot] Widget not loaded: path not in allowed list.", currentPathname);
+        const allowed = injectedAllowedPaths; // Assuming injectedAllowedPaths is globally available
+        const disallowed = injectedDisallowedPaths; // Assuming injectedDisallowedPaths is globally available
+        let shouldDisplayWidget = false; // Initialize to false as per the new logic
+    
+        function checkVisibility() {
+            let isAllowedByRules = true; // Assume allowed unless rules dictate otherwise
+    
+            if (allowed.length > 0) {
+                isAllowedByRules = allowed.some(path => {
+                    return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
+                });
             }
-        } else {
-            if (disallowed.some(path => {
-                return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
-            })) {
-                shouldDisplayWidget = false;
-                // console.warn("[Chatbot] Widget not loaded: path is disallowed.", currentPathname);
+    
+            let isDisallowedByRules = false;
+            if (disallowed.length > 0) {
+                isDisallowedByRules = disallowed.some(path => {
+                    return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
+                });
+            }
+            
+            // The condition for displaying the widget is if it's allowed by rules AND NOT disallowed by rules
+            return isAllowedByRules && !isDisallowedByRules;
+        }
+    
+        let attempts = 0;
+        const maxAttempts = 3;
+        const delays = [200, 300, 700];
+    
+        function tryToggleWidget() {
+            shouldDisplayWidget = checkVisibility();
+            const widget = document.getElementById("chatbot-widget");
+    
+            if (widget) {
+                if (shouldDisplayWidget) {
+                    widget.style.display = "";
+                    // console.log(`[Chatbot] Widget visible after ${attempts + 1} attempt(s).`);
+                } else {
+                    widget.style.display = "none";
+                    // console.warn("[Chatbot] Widget not loaded: path restrictions apply or element not found after retries.");
+                }
+                // Once found, or max attempts reached, stop retrying
+                return; 
+            }
+    
+            // Widget not found, retry if attempts left and widget should potentially be displayed
+            if (attempts < maxAttempts) {
+                attempts++;
+                // console.log(`[Chatbot] Widget element not found yet. Retrying in ${delays[attempts - 1]}ms (Attempt ${attempts}/${maxAttempts}).`);
+                setTimeout(tryToggleWidget, delays[attempts - 1]);
+            } else {
+                // console.warn("[Chatbot] Widget element not found after all retries. Widget will not be displayed.");
+                // If the widget is still not found after all attempts, ensure it's hidden if it ever appears
+                if (widget) { // Re-check just in case it appeared right before this line
+                    widget.style.display = "none";
+                }
             }
         }
-
-        const widget = document.getElementById("chatbot-widget");
-        if (!widget) {
-            // console.log("[Chatbot] Widget element not found yet.");
-            return;
-        }
-
-        widget.style.display = shouldDisplayWidget ? "" : "none";
-        // console.log(`[Chatbot] Widget ${shouldDisplayWidget ? "visible" : "hidden"}.`);
+    
+        // Start the process
+        tryToggleWidget();
     }
 
     // Run on initial load (wait for widget if needed)
