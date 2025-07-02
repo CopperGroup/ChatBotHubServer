@@ -114,7 +114,8 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
         disallowedPaths,
         translatedPhrases,
         chatbotCode,
-        socketIoUrl: process.env.SOCKET_URL
+        socketIoUrl: process.env.SOCKET_URL,
+        backendUrl: process.env.BACKEND_URL
     };
 
     // Read the client-side JavaScript file
