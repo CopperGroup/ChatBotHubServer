@@ -26,11 +26,20 @@
     // --- Core function to check path and toggle widget display ---
     function checkAndToggleWidget() {
         const currentPathname = window.location.pathname;
-        const allowed = injectedAllowedPaths; // Assuming injectedAllowedPaths is globally available
-        const disallowed = injectedDisallowedPaths; // Assuming injectedDisallowedPaths is globally available
-        let shouldDisplayWidget = false; // Initialize to false as per the new logic
     
         function checkVisibility() {
+            // Retrieve injectedAllowedPaths and injectedDisallowedPaths directly
+            // inside checkVisibility to ensure they are updated after config load.
+            const allowed = injectedAllowedPaths; 
+            const disallowed = injectedDisallowedPaths; 
+    
+            // Add a safety check for 'undefined' or 'null' values for allowed/disallowed
+            // before trying to access .length or .some().
+            if (!Array.isArray(allowed) || !Array.isArray(disallowed)) {
+                // console.warn("[Chatbot] 'allowed' or 'disallowed' paths are not arrays. Defaulting to hidden.");
+                return false; // Safely exit if paths are not correctly initialized
+            }
+    
             let isAllowedByRules = true; // Assume allowed unless rules dictate otherwise
     
             if (allowed.length > 0) {
@@ -45,7 +54,7 @@
                     return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
                 });
             }
-            
+    
             // The condition for displaying the widget is if it's allowed by rules AND NOT disallowed by rules
             return isAllowedByRules && !isDisallowedByRules;
         }
@@ -66,19 +75,16 @@
                     widget.style.display = "none";
                     // console.warn("[Chatbot] Widget not loaded: path restrictions apply or element not found after retries.");
                 }
-                // Once found, or max attempts reached, stop retrying
-                return; 
+                return;
             }
     
-            // Widget not found, retry if attempts left and widget should potentially be displayed
             if (attempts < maxAttempts) {
                 attempts++;
                 // console.log(`[Chatbot] Widget element not found yet. Retrying in ${delays[attempts - 1]}ms (Attempt ${attempts}/${maxAttempts}).`);
                 setTimeout(tryToggleWidget, delays[attempts - 1]);
             } else {
                 // console.warn("[Chatbot] Widget element not found after all retries. Widget will not be displayed.");
-                // If the widget is still not found after all attempts, ensure it's hidden if it ever appears
-                if (widget) { // Re-check just in case it appeared right before this line
+                if (widget) {
                     widget.style.display = "none";
                 }
             }
