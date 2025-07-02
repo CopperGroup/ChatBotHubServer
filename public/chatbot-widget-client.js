@@ -30,7 +30,7 @@
         const disallowed = injectedDisallowedPaths;
         let shouldDisplayWidget = true;
 
-        console.log("[Chatbot] Checking path:", currentPathname);
+        // console.log("[Chatbot] Checking path:", currentPathname);
 
         if (allowed.length > 0) {
             shouldDisplayWidget = allowed.some(path => {
@@ -38,25 +38,25 @@
             });
 
             if (!shouldDisplayWidget) {
-                console.warn("[Chatbot] Widget not loaded: path not in allowed list.", currentPathname);
+                // console.warn("[Chatbot] Widget not loaded: path not in allowed list.", currentPathname);
             }
         } else {
             if (disallowed.some(path => {
                 return path === "/" ? currentPathname === "/" : currentPathname.startsWith(path);
             })) {
                 shouldDisplayWidget = false;
-                console.warn("[Chatbot] Widget not loaded: path is disallowed.", currentPathname);
+                // console.warn("[Chatbot] Widget not loaded: path is disallowed.", currentPathname);
             }
         }
 
         const widget = document.getElementById("chatbot-widget");
         if (!widget) {
-            console.log("[Chatbot] Widget element not found yet.");
+            // console.log("[Chatbot] Widget element not found yet.");
             return;
         }
 
         widget.style.display = shouldDisplayWidget ? "" : "none";
-        console.log(`[Chatbot] Widget ${shouldDisplayWidget ? "visible" : "hidden"}.`);
+        // console.log(`[Chatbot] Widget ${shouldDisplayWidget ? "visible" : "hidden"}.`);
     }
 
     // Run on initial load (wait for widget if needed)
@@ -73,7 +73,7 @@
 
     // Listen for back/forward navigation
     window.addEventListener('popstate', () => {
-        console.log("[Chatbot] popstate detected");
+        // console.log("[Chatbot] popstate detected");
         checkAndToggleWidget();
     });
 
@@ -81,18 +81,18 @@
     const originalPushState = history.pushState;
     history.pushState = function () {
         originalPushState.apply(this, arguments);
-        console.log("[Chatbot] pushState detected");
+        // console.log("[Chatbot] pushState detected");
         checkAndToggleWidget();
     };
 
     const originalReplaceState = history.replaceState;
     history.replaceState = function () {
         originalReplaceState.apply(this, arguments);
-        console.log("[Chatbot] replaceState detected");
+        // console.log("[Chatbot] replaceState detected");
         checkAndToggleWidget();
     };
 
-    console.log("[Chatbot] Widget will be displayed.");
+    // console.log("[Chatbot] Widget will be displayed.");
 
     // Load Socket.IO script dynamically
     const socketScript = document.createElement('script');
@@ -112,6 +112,7 @@
         chatbotCode = config.chatbotCode;
         currentWebsiteURL = window.location.href; // Still get current URL from client
         socketIoUrl = config.socketIoUrl; // Injected from server
+        backendUrl=config.backendUrl
 
         // --- CSS Styles and Animations ---
         const style = document.createElement('style');
@@ -753,7 +754,7 @@
                                 // and show the "Please choose an option" message.
                                 // It will be re-evaluated when the bot replies.
                                 updateInputAreaVisibility(false); 
-                                console.log("Widget: Option clicked (user message sent). Hiding input field until bot replies.");
+                                // console.log("Widget: Option clicked (user message sent). Hiding input field until bot replies.");
                             }
                         });
                     }
@@ -867,12 +868,12 @@
                 inputFieldContainer.style.display = 'flex';
                 inputStatusMessage.style.display = 'none';
                 isInputVisible = true;
-                console.log("Widget: updateInputAreaVisibility: Showing input field, hiding status message.");
+                // console.log("Widget: updateInputAreaVisibility: Showing input field, hiding status message.");
             } else {
                 inputFieldContainer.style.display = 'none';
                 inputStatusMessage.style.display = 'block';
                 isInputVisible = false;
-                console.log("Widget: updateInputAreaVisibility: Hiding input field, showing status message.");
+                // console.log("Widget: updateInputAreaVisibility: Hiding input field, showing status message.");
             }
             // Ensure the main input area container is visible (opacity handled by showView)
             inputArea.style.display = 'block'; 
@@ -995,8 +996,8 @@
         closeBtn.addEventListener('click', toggleWidget);
         
         // --- Core Functionality - Socket and Message Handling ---
-        console.log("chatbotCode:", chatbotCode);
-        console.log("currentWebsiteURL:", currentWebsiteURL);
+        // console.log("chatbotCode:", chatbotCode);
+        // console.log("currentWebsiteURL:", currentWebsiteURL);
         
         const socket = io(socketIoUrl, { // Use the injected socketIoUrl
             path: '/socket.io',
@@ -1004,7 +1005,7 @@
             transports: ['websocket', 'polling'],
         });
         
-        console.log(socket)
+        // console.log(socket)
         // Message rendering function
         const renderMessage = (sender, text, timestamp, options = [], isReplySent = false) => {
             const messageBubble = createMessageBubble(sender, text, timestamp, options, isReplySent);
@@ -1020,16 +1021,16 @@
                 // When a user sends a message, assume input should be visible for the next turn,
                 // unless the preceding bot message had options that are now considered 'replied to'.
                 // The actual visibility update will happen when the bot replies.
-                console.log("Widget: renderMessage: User message. Input state will be determined by next bot reply.");
+                // console.log("Widget: renderMessage: User message. Input state will be determined by next bot reply.");
             } else { // Bot/AI/staff message
                 // If a bot sends a message with options, and it's the latest message, hide the input field.
                 // If it sends a message without options, show the input field.
                 if (options && options.length > 0 && !isReplySent) {
                     updateInputAreaVisibility(false); // Hide input, show "choose option" message
-                    console.log("Widget: renderMessage: Bot message with options. Hiding input.");
+                    // console.log("Widget: renderMessage: Bot message with options. Hiding input.");
                 } else {
                     updateInputAreaVisibility(true); // Show input
-                    console.log("Widget: renderMessage: Bot message without options or options replied to. Showing input.");
+                    // console.log("Widget: renderMessage: Bot message without options or options replied to. Showing input.");
                 }
             }
         };
@@ -1057,7 +1058,7 @@
             localStorage.removeItem('currentChatId');
             currentChatId = null;
             
-            console.log("Widget: Navigating to chat list. currentChatId cleared.");
+            // console.log("Widget: Navigating to chat list. currentChatId cleared.");
             hideTypingIndicator();
             messagesContainer.innerHTML = '';
             
@@ -1075,7 +1076,7 @@
         
         // CRITICAL CHANGE: Load messages FIRST, then show view
         const showChatMessages = async (chatId) => {
-            console.log("Widget: showChatMessages called for chat:", chatId);
+            // console.log("Widget: showChatMessages called for chat:", chatId);
             currentChatId = chatId;
             localStorage.setItem('currentChatId', currentChatId);
             
@@ -1084,18 +1085,18 @@
             await loadMessages(chatId);
             
             showView('chat', 'right');
-            console.log("Widget: Messages loaded. Navigating to chat view.");
+            // console.log("Widget: Messages loaded. Navigating to chat view.");
             
             // Adjust this timeout to be AFTER the showView transition finishes + a small buffer
             setTimeout(() => {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                console.log("Widget: Scrolled to bottom after chat view transition.");
+                // console.log("Widget: Scrolled to bottom after chat view transition.");
             }, 450); // Keep this to ensure scroll
         };
         
         // --- Data Loading Functions ---
         const loadMessages = async (chatId) => {
-            console.log("Widget: Attempting to load messages for chat:", chatId);
+            // console.log("Widget: Attempting to load messages for chat:", chatId);
             const loadingChatId = chatId;
             
             try {
@@ -1103,23 +1104,23 @@
                     messagesContainer.innerHTML = '';
                     currentChatId = null;
                     localStorage.removeItem('currentChatId');
-                    console.log("Widget: ChatId is null, cleared messages and currentChatId.");
+                    // console.log("Widget: ChatId is null, cleared messages and currentChatId.");
                     return;
                 }
                 
                 const response = await fetch(`${backendUrl}/api/chats/${loadingChatId}`);
                 const chat = await response.json();
-                console.log("Widget: Fetched chat data:", chat);
+                // console.log("Widget: Fetched chat data:", chat);
                 
                 if (currentChatId !== loadingChatId) {
-                    console.warn("Widget: Aborting message load for old chat ID as currentChatId changed.");
+                    // console.warn("Widget: Aborting message load for old chat ID as currentChatId changed.");
                     return;
                 }
                 
                 messagesContainer.innerHTML = '';
                 
                 const loadedMessages = chat.messages ? JSON.parse(chat.messages) : [];
-                console.log("Widget: Parsed loaded messages:", loadedMessages);
+                // console.log("Widget: Parsed loaded messages:", loadedMessages);
                 
                 let lastBotMessageWithOptionsPresent = false;
                 let userRepliedAfterLastOptions = false;
@@ -1154,22 +1155,22 @@
                 // This logic determines the final state of the input area after all messages are loaded.
                 if (chat.status === 'closed') {
                     updateInputAreaVisibility(false); // Chat closed, hide input
-                    console.log("Widget: Load: Chat is closed. Input will be hidden.");
+                    // console.log("Widget: Load: Chat is closed. Input will be hidden.");
                 } else if (lastBotMessageWithOptionsPresent && !userRepliedAfterLastOptions) {
                     // If the last bot message had options, and no user replied after it, hide input.
                     updateInputAreaVisibility(false);
-                    console.log(`Widget: Load: Last bot message had options and no user reply after. Input will be hidden.`);
+                    // console.log(`Widget: Load: Last bot message had options and no user reply after. Input will be hidden.`);
                 } else {
                     // Default: show input if chat is open and no unresolved options
                     updateInputAreaVisibility(true);
-                    console.log("Widget: Load: No unresolved options or chat is open. Input will be shown.");
+                    // console.log("Widget: Load: No unresolved options or chat is open. Input will be shown.");
                 }
 
                 messagesContainer.scrollTop = messagesContainer.scrollHeight; 
                 // --- END CRITICAL REFINED LOGIC ---
                 
             } catch (error) {
-                console.error('Error loading chat messages:', error);
+                // console.error('Error loading chat messages:', error);
                 if (currentChatId === loadingChatId) {
                     renderMessage('bot', t['Error loading chat history.'], new Date().toISOString());
                 }
@@ -1178,9 +1179,11 @@
 
         
         const loadUserChats = async (email) => {
-            console.log("Widget: Loading user chats for email:", email);
+            // console.log("Widget: Loading user chats for email:", email);
             try {
+                // console.log(backendUrl)
                 const response = await fetch(`${backendUrl}/api/chats/${chatbotCode}/${email}`);
+                // console.log(response)
                 const chats = await response.json();
                 
                 chatListDiv.innerHTML = `
@@ -1263,12 +1266,12 @@
                             currentChatId = chat._id;
                             localStorage.setItem('currentChatId', currentChatId);
                             foundOpenChatForAutoLoad = true;
-                            console.log("Widget: Found and set most recent open chat for auto-load:", currentChatId);
+                            // console.log("Widget: Found and set most recent open chat for auto-load:", currentChatId);
                         }
                     });
                 }
             } catch (error) {
-                console.error('Error loading user chats:', error);
+                // console.error('Error loading user chats:', error);
                 renderMessage('bot', t['Error loading your chats.'], new Date().toISOString());
             } finally {
                 // userInitiatedBackToList is not used in the provided code, can be removed if not needed elsewhere
@@ -1276,7 +1279,7 @@
         };
         
         // --- Final Event Listeners and Initialization ---
-        console.log("Widget: socketScript.onload initiated.");
+        // console.log("Widget: socketScript.onload initiated.");
         
         // Email submission
         emailSubmitBtn.addEventListener('click', async () => {
@@ -1284,11 +1287,11 @@
             if (email) {
                 localStorage.setItem('chatbotEmail', email);
                 userEmail = email;
-                console.log("Widget: Email submitted. Transitioning to conversations.");
+                // console.log("Widget: Email submitted. Transitioning to conversations.");
                 showView('conversations', 'right');
                 loadUserChats(userEmail);
             } else {
-                console.warn("Widget: Email input is empty.");
+                // console.warn("Widget: Email input is empty.");
                 emailInput.style.borderColor = '#ef4444';
                 emailInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
                 emailInput.focus();
@@ -1313,10 +1316,10 @@
                 // When starting a new chat, the input should always be visible
                 updateInputAreaVisibility(true); 
 
-                console.log("Widget: Emitting 'create_new_chat'.");
+                // console.log("Widget: Emitting 'create_new_chat'.");
                 socket.emit("create_new_chat", { chatbotCode, email: userEmail });
             } catch (error) {
-                console.error('Error creating new chat:', error);
+                // console.error('Error creating new chat:', error);
                 hideTypingIndicator();
                 renderMessage('bot', t['Error starting a new chat.'], new Date().toISOString());
             }
@@ -1326,7 +1329,7 @@
         sendBtn.addEventListener("click", async () => {
             const msg = msgInput.value.trim();
             if (!msg || !currentChatId) {
-                console.warn("Widget: Cannot send message. Message empty or no currentChatId.");
+                // console.warn("Widget: Cannot send message. Message empty or no currentChatId.");
                 return;
             }
         
@@ -1349,12 +1352,12 @@
             hideTypingIndicator();
             renderMessage('user', msg, new Date().toISOString());
             msgInput.value = '';
-            console.log("Widget: Emitting 'message' to server. ChatId:", currentChatId);
+            // console.log("Widget: Emitting 'message' to server. ChatId:", currentChatId);
             socket.emit("message", { chatbotCode, chatId: currentChatId, email: userEmail, message: msg, currentWebsiteURL });
             
             // NEW: After user sends a regular message, explicitly show the input field
             updateInputAreaVisibility(true);
-            console.log("Widget: Regular message sent by user. Showing input field.");
+            // console.log("Widget: Regular message sent by user. Showing input field.");
         });
         
         msgInput.addEventListener('keypress', (e) => {
@@ -1368,37 +1371,37 @@
         
         // Socket event listeners
         socket.on("connect", () => {
-            console.log("Chatbot connected:", socket.id);
+            console.log("Chatbot connected:");
         });
         
         socket.on("new_chat_data", (data) => {
-            console.log("Widget received new_chat_data:", data);
+            // console.log("Widget received new_chat_data:", data);
             currentChatId = data.chat._id;
             localStorage.setItem('currentChatId', currentChatId);
-            console.log("Widget: New chat data received. Joining new chat room:", currentChatId);
+            // console.log("Widget: New chat data received. Joining new chat room:", currentChatId);
             socket.emit("join_chat", { chatId: currentChatId });
         });
         
         socket.on("reply", (data) => {
             hideTypingIndicator();
-            console.log("Widget received 'reply' event:", data);
+            // console.log("Widget received 'reply' event:", data);
             // The renderMessage function now handles setting isInputVisible and updating inputArea display
             // This is the primary trigger for showing/hiding the input based on bot response.
             renderMessage(data.sender, data.text, data.timestamp || new Date().toISOString(), data.options);
         });
         
         socket.on("bot_typing_start", () => {
-            console.log("Widget received bot_typing_start");
+            // console.log("Widget received bot_typing_start");
             showTypingIndicator();
         });
         
         socket.on("bot_typing_stop", () => {
-            console.log("Widget received bot_typing_stop");
+            // console.log("Widget received bot_typing_stop");
             hideTypingIndicator();
         });
         
         socket.on("chat_update", (data) => {
-            console.log("Widget received 'chat_update' event:", data);
+            // console.log("Widget received 'chat_update' event:", data);
             if (data.chatId === currentChatId) {
                 if (data.message && data.sender === "bot") {
                     // Chat update with a new message (e.g., from an agent)
@@ -1406,7 +1409,7 @@
                 }
                 if (data.status === 'closed') {
                     updateInputAreaVisibility(false); // Chat closed, hide input permanently
-                    console.log("Widget: Chat_update: Chat status changed to closed. Hiding input.");
+                    // console.log("Widget: Chat_update: Chat status changed to closed. Hiding input.");
                     // Render message if it wasn't already part of the `data.message` above
                     if (!data.message) {
                         renderMessage('bot', t['This conversation has been closed.'], new Date().toISOString());
@@ -1414,7 +1417,7 @@
                 } else if (data.status === 'open') {
                     // If chat becomes open, and the *last message* (whether from this update or previously)
                     // doesn't have options, show the input.
-                    console.log("Widget: Chat_update: Chat status changed to open. Re-evaluating input visibility.");
+                    // console.log("Widget: Chat_update: Chat status changed to open. Re-evaluating input visibility.");
                     // Re-evaluate input visibility based on the very last message in the container
                     const lastMessageElement = messagesContainer.lastElementChild;
                     if (lastMessageElement && lastMessageElement.classList.contains('message-bubble')) {
@@ -1432,19 +1435,19 @@
                     }
                 }
             } else {
-                console.log("Widget: Ignoring 'chat_update' for non-current chat:", data.chatId, "Current ChatId:", currentChatId);
+                // console.log("Widget: Ignoring 'chat_update' for non-current chat:", data.chatId, "Current ChatId:", currentChatId);
             }
         });
         
         // --- CRITICAL INITIALIZATION LOGIC FOR WIDGET START ---
-        console.log("Widget: Checking initial state for userEmail. userEmail:", userEmail, "currentChatId:", currentChatId);
+        // console.log("Widget: Checking initial state for userEmail. userEmail:", userEmail, "currentChatId:", currentChatId);
         
         if (userEmail) {
-            console.log("Widget: User email found. Loading chats.");
+            // console.log("Widget: User email found. Loading chats.");
             loadUserChats(userEmail);
             showView('conversations');
         } else {
-            console.log("Widget: No user email found. Showing email view.");
+            // console.log("Widget: No user email found. Showing email view.");
             showView('email');
         }
         // Initial setup for input area visibility

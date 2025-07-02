@@ -118,6 +118,8 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
         backendUrl: process.env.BACKEND_URL
     };
 
+    console.log(injectedConfig)
+
     // Read the client-side JavaScript file
     const clientScriptPath = path.join(__dirname, 'public', 'chatbot-widget-client.js');
     let clientScriptContent = await fs.readFile(clientScriptPath, 'utf8');
