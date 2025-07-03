@@ -755,6 +755,7 @@ export function handleSocket(socket, io) {
                     let nextWorkflowBlockToSave = chat.currentWorkflowBlockId; // Default to current workflow position
                     let telegramNotificationNeeded = false; // Flag to send telegram notification
                     let workflowPathEnded = false; // Flag to indicate if workflow path reached its end (like 'end' block or no more connections)
+                    const shouldNotifyOwnerTelegram = websiteOwner && websiteOwner.preferences && websiteOwner.preferences.telegram;
 
                     // Parse the workflow JSON from website.predefinedAnswers
                     let workflowData = {};
@@ -836,6 +837,16 @@ export function handleSocket(socket, io) {
 
                     const triggerAIFallback = (!workflowHandled || (botMessage === null && workflowHandled)) || workflowPathEnded;
 
+                    if(!workflowHandled) {
+                        sendTelegramNotification({
+                            message: `New message from user ${chat.name} on ${website.name}. \n Message: ${message}`,
+                            websiteId: website._id.toString(),
+                            notifyOwner: shouldNotifyOwnerTelegram,
+                            ownerId: websiteOwner ? websiteOwner._id.toString() : null,
+                            notifyAllStaff: true, // Notify all staff as this is a handoff
+                            chatId: chat._id
+                        });
+                    }
                     if (triggerAIFallback) {
                         console.log(`SERVER FALLBACK: Conditions for AI/Default fallback met. Proceeding with fallback logic.`);
                         
@@ -966,14 +977,13 @@ export function handleSocket(socket, io) {
 
                     // Trigger Telegram notification if the flag is set during workflow processing
                     if (telegramNotificationNeeded) {
-                      const shouldNotifyOwnerTelegram = websiteOwner && websiteOwner.preferences && websiteOwner.preferences.telegram;
-
                       sendTelegramNotification({
                           message: `Workflow completed for chat from ${chat.name} on ${website.name}. Agent assistance requested.`,
                           websiteId: website._id.toString(),
                           notifyOwner: shouldNotifyOwnerTelegram,
                           ownerId: websiteOwner ? websiteOwner._id.toString() : null,
-                          notifyAllStaff: true // Notify all staff as this is a handoff
+                          notifyAllStaff: true, // Notify all staff as this is a handoff
+                          chatId: chat._id
                       });
                       console.log(`SERVER DEBUG: Telegram notification triggered due to workflow 'end' block.`);
                     }
