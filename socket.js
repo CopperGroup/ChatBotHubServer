@@ -836,16 +836,6 @@ export function handleSocket(socket, io) {
 
                     const triggerAIFallback = (!workflowHandled || (botMessage === null && workflowHandled)) || workflowPathEnded;
 
-                    if(workflowHandled) {
-                        sendTelegramNotification({
-                            message: `New message from user ${chat.name} on ${website.name}. \n Message: ${message}`,
-                            websiteId: website._id.toString(),
-                            notifyOwner: shouldNotifyOwnerTelegram,
-                            ownerId: websiteOwner ? websiteOwner._id.toString() : null,
-                            notifyAllStaff: true, // Notify all staff as this is a handoff
-                            chatId: chat._id
-                        });
-                    }
                     if (triggerAIFallback) {
                         console.log(`SERVER FALLBACK: Conditions for AI/Default fallback met. Proceeding with fallback logic.`);
                         
@@ -983,8 +973,7 @@ export function handleSocket(socket, io) {
                           websiteId: website._id.toString(),
                           notifyOwner: shouldNotifyOwnerTelegram,
                           ownerId: websiteOwner ? websiteOwner._id.toString() : null,
-                          notifyAllStaff: true, // Notify all staff as this is a handoff
-                          chatId: chat._id
+                          notifyAllStaff: true // Notify all staff as this is a handoff
                       });
                       console.log(`SERVER DEBUG: Telegram notification triggered due to workflow 'end' block.`);
                     }
