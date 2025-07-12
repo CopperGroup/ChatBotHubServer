@@ -1,3 +1,4 @@
+// models/website.js
 import mongoose from 'mongoose';
 
 const websiteSchema = new mongoose.Schema({
@@ -19,15 +20,18 @@ const websiteSchema = new mongoose.Schema({
             header: 'Chat Support',
             allowAIResponses: false,
             language: "en",
-            // ADDED: New path preferences
-            allowedPaths: [],   // Array of strings, e.g., ['/', '/contact', '/products']
-            disallowedPaths: [], // Array of strings, e.g., ['/admin', '/checkout']
+            allowedPaths: [],
+            disallowedPaths: [],
+            dailyTokenLimit: null
         },
     },
     creditCount: { type: Number, default: 100 },
     lastCreditBoostDate: { type: Date, default: null },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    freeTrial: { type: Date}
+    freeTrial: { type: Date},
+    lastProcessedPaymentId: { type: String, unique: true, sparse: true }, // ADDED FOR IDEMPOTENCY
+    stripeSubscriptionId: { type: String, default: null },
+    billedSuccessfuly: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model('Website', websiteSchema);

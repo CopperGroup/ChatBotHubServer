@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
             telegramBotSetUp: false
         },
     },
-    transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
+    transactions: [{ type: String }],
+    stripeCusId: { type: String },
     // New fields for password reset
     resetPasswordToken: String,
     resetPasswordExpires: Date,

@@ -1,4 +1,4 @@
-// routes/user.js
+// routes/user.js (Main Service)
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js'; // Updated User model
@@ -7,12 +7,15 @@ import Plan from '../models/plan.js';     // Assuming Plan model is correctly im
 import authMiddleware from '../middleware/auth.js'; // Import the authentication middleware
 import { changePasswordLinkEmail } from '../services/email.js';
 import dotenv from 'dotenv';
+// import axios from 'axios'; // Not needed if using fetch exclusively
 
 dotenv.config();
 
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const PAYMENT_SERVICE_BASE_URL = process.env.PAYMENT_SERVICE_BASE_URL; // From main service .env
+const PAYMENT_SERVICE_API_KEY = process.env.PAYMENT_SERVICE_API_KEY; // From main service .env
 
 // @route   POST /api/users/register
 // @desc    Register a new user
@@ -47,9 +50,9 @@ router.post('/register', async (req, res) => {
         jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
             // Return token and basic user info (id, email)
-            res.status(201).json({ 
+            res.status(201).json({
                 message: 'User registered successfully',
-                token, 
+                token,
                 user: { id: user.id, email: user.email } // Only send id and email
             });
         });
@@ -95,9 +98,9 @@ router.post('/login', async (req, res) => {
         jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
             // Return token and basic user info (id, email)
-            res.json({ 
+            res.json({
                 message: 'Logged in successfully',
-                token, 
+                token,
                 user: { id: user.id, email: user.email } // Only send id and email
             });
         });
@@ -126,12 +129,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
                 path: 'websites',
                 model: Website,
                 populate: { path: 'plan', model: Plan }
-            })
-            .populate({ // Populate transactions as well if needed in frontend
-                path: 'transactions',
-                model: 'Transaction', // Assuming your Transaction model is named 'Transaction'
             });
-
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -143,6 +141,31 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   PUT /api/users/:userId/customerId
+// @desc    Update user's Stripe Customer ID
+// @access  Private (requires authMiddleware)
+router.put('/:userId/customerId', authMiddleware, async (req, res) => {
+    try {
+        const { stripeCustomerId } = req.body;
+
+        if (req.user.id !== req.params.userId) {
+            return res.status(403).json({ message: 'Unauthorized: Access denied' });
+        }
+
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.stripeCusId = stripeCustomerId;
+        await user.save();
+
+        res.status(200).json({ message: 'Customer Id added succesfuly'});
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 // @route   PUT /api/users/:userId/preferences
 // @desc    Update user preferences
@@ -180,7 +203,7 @@ const RESET_PASSWORD_SECRET = process.env.RESET_PASSWORD_SECRET;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    
+
     try {
         // Find the user by email
         const user = await User.findOne({ email });
@@ -255,5 +278,58 @@ router.post('/reset-password', async (req, res) => {
         res.status(500).json({ message: 'Server Error. Could not reset password.' });
     }
 });
+
+// --- NEW ROUTE: Fetch all payments for a user from Payment Service ---
+// @route   GET /api/users/:userId/payments
+// @desc    Get all payment records for a specific user
+// @access  Private (requires authMiddleware)
+router.get('/:userId/payments', authMiddleware, async (req, res) => {
+    const userId = req.params.userId;
+
+    try {
+        // Ensure the authenticated user matches the requested userId
+        if (req.user.id !== userId) {
+            return res.status(403).json({ message: 'Unauthorized: Access denied' });
+        }
+
+        if (!PAYMENT_SERVICE_BASE_URL || !PAYMENT_SERVICE_API_KEY) {
+            console.error("Payment service URL or API key not configured in main service .env");
+            return res.status(500).json({ message: "Payment service configuration error." });
+        }
+
+        let paymentsData;
+        try {
+            const response = await fetch(
+                `${PAYMENT_SERVICE_BASE_URL}/payments/users/${userId}`, // Call payment service endpoint
+                {
+                    method: 'GET',
+                    headers: {
+                        'x-main-service-api-key': PAYMENT_SERVICE_API_KEY, // Auth header for payment service
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+                console.error(`Error response from payment service for user payments ${userId}:`, errorBody);
+                throw new Error(`Payment service returned non-OK status: ${response.status} - ${errorBody.message || JSON.stringify(errorBody)}`);
+            }
+
+            paymentsData = await response.json(); // Parse the JSON response
+
+        } catch (fetchError) {
+            console.error(`Error fetching payments for user ${userId} from payment service:`, fetchError);
+            return res.status(500).json({ message: "Failed to retrieve user payments from payment service." });
+        }
+
+        res.status(200).json(paymentsData);
+
+    } catch (err) {
+        console.error("Error in fetching user payments:", err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
 
 export const userRoutes = router;

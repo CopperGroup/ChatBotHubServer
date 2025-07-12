@@ -349,7 +349,6 @@ const multiLanguage = {
         ro: "ÎNCHIS",
         fi: "SULJETTU"
     },
-    // NEW TEXT ELEMENT
     "Please choose an option to continue.": {
         en: "Please choose an option to continue.",
         uk: "Будь ласка, виберіть варіант для продовження.",
@@ -361,6 +360,19 @@ const multiLanguage = {
         pt: "Por favor, escolha uma opção para continuar.",
         ro: "Vă rugăm să alegeți o opțiune pentru a continua.",
         fi: "Ole hyvä ja valitse vaihtoehto jatkaaksesi."
+    },
+    // NEW TEXT ELEMENT
+    "Ok, I already transferred your message to the staff team, they will join this chat soon.": {
+        en: "Ok, I already transferred your message to the staff team, they will join this chat soon.",
+        uk: "Гаразд, я вже передав ваше повідомлення команді співробітників, вони незабаром приєднаються до цього чату.",
+        pl: "OK, przekazałem już Twoją wiadomość do zespołu, dołączą do tego czatu wkrótce.",
+        fr: "D'accord, j'ai déjà transféré votre message à l'équipe, elle rejoindra ce chat bientôt.",
+        de: "Okay, ich habe Ihre Nachricht bereits an das Team weitergeleitet, sie werden diesem Chat bald beitreten.",
+        es: "De acuerdo, ya he transferido tu mensaje al equipo, se unirán a este chat pronto.",
+        it: "Ok, ho già trasferito il tuo messaggio al team del personale, si uniranno a questa chat a breve.",
+        pt: "Ok, já transferi sua mensagem para a equipe, eles se juntarão a este chat em breve.",
+        ro: "Ok, am transferat deja mesajul dumneavoastră echipei, se vor alătura acestui chat în curând.",
+        fi: "Ok, olen jo välittänyt viestisi henkilökunnalle, he liittyvät tähän chattiin pian."
     }
 };
 
