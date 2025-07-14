@@ -28,8 +28,10 @@ const websiteSchema = new mongoose.Schema({
     creditCount: { type: Number, default: 100 },
     lastCreditBoostDate: { type: Date, default: null },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    freeTrial: { type: Date},
-    lastProcessedPaymentId: { type: String, unique: true, sparse: true }, // ADDED FOR IDEMPOTENCY
+    freeTrial: { type: Date}, // Date when free trial started (NULL if no trial/ended)
+    freeTrialPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null }, // NEW: The ID of the plan that granted the free trial
+    freeTrialEnded: { type: Boolean, default: false }, // Changed default to false, meaning trial is active or not started yet.
+    lastProcessedPaymentId: { type: String, unique: true, sparse: true },
     stripeSubscriptionId: { type: String, default: null },
     billedSuccessfuly: { type: Boolean, default: false }
 }, { timestamps: true });
