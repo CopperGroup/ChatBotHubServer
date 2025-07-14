@@ -18,7 +18,7 @@ import {
 const router = express.Router();
 
 // --- Configuration for Plan Controller Service ---
-let PLAN_CONTROLLER_SERVICE_URL = process.env.PLAN_CONTROLLER_SERVICE_URL || "http://localhost:3002"; // Default fallback
+let PLAN_CONTROLLER_SERVICE_URL = "http://localhost:3002"; // Default fallback
 let FREE_TRIAL_DURATION_DAYS = 14; // Default fallback
 
 // Helper function to fetch shared variables at startup
