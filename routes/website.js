@@ -506,14 +506,8 @@ router.put("/:id/confirm-plan-change", paymentServiceAuth, async (req, res) => {
     if (newPlan && newPlan.creditBoostMonthly > 0) {
       const now = new Date();
 
-      const shouldBoost =
-        !website.lastCreditBoostDate ||
-        (now.getTime() - new Date(website.lastCreditBoostDate).getTime()) > 28 * 24 * 60 * 60 * 1000;
-
-      if (shouldBoost) {
         website.creditCount += newPlan.creditBoostMonthly;
         website.lastCreditBoostDate = now;
-      }
     }
 
     await website.save();
