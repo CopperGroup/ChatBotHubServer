@@ -566,6 +566,80 @@ router.put("/:id/billing-failed", paymentServiceAuth, async (req, res) => {
   }
 });
 
+router.post("/:id/cancel-subscription", authMiddleware, async (req, res) => {
+    // Get userId from the authenticated token
+    const userId = req.user.id;
+    const websiteId = req.params.id;
+    const authToken = req.headers['x-auth-token']; // Pass user's auth token to payment service
+
+    try {
+        const user = await User.findById(userId);
+        if (!user || !user.websites.includes(websiteId)) {
+            return res.status(403).json({ message: "Not authorized to cancel subscription for this website." });
+        }
+
+        const website = await Website.findById(websiteId);
+        if (!website) {
+            return res.status(404).json({ message: "Website not found." });
+        }
+
+        if (!website.stripeSubscriptionId) {
+            return res.status(400).json({ message: "No active Stripe subscription found for this website." });
+        }
+
+        // Call Payment Service to handle Stripe subscription cancellation
+        const PAYMENT_SERVICE_BASE_URL = process.env.PAYMENT_SERVICE_BASE_URL;
+        const PAYMENT_SERVICE_API_KEY = process.env.PAYMENT_SERVICE_API_KEY;
+
+        if (!PAYMENT_SERVICE_BASE_URL || !PAYMENT_SERVICE_API_KEY) {
+            console.error("Payment service URL or API key not configured in main service .env");
+            return res.status(500).json({ message: "Payment service configuration error." });
+        }
+
+        let paymentServiceResponseData;
+        try {
+            const response = await fetch(
+                `${PAYMENT_SERVICE_BASE_URL}/subscriptions/${website.stripeSubscriptionId}`, // Use the Stripe Subscription ID in the URL
+                {
+                    method: 'DELETE', // Use DELETE method
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-auth-token': authToken, // Pass user's auth token
+                        'x-main-service-api-key': PAYMENT_SERVICE_API_KEY // Authenticate main service to payment service
+                    },
+                    body: JSON.stringify({
+                        userId: userId, // Pass userId and websiteId in body for payment service to verify
+                        websiteId: websiteId
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+                console.error(`Error response from payment service for subscription cancellation:`, errorBody);
+                throw new Error(`Payment service returned non-OK status: ${response.status} - ${errorBody.message || JSON.stringify(errorBody)}`);
+            }
+
+            paymentServiceResponseData = await response.json();
+
+        } catch (fetchError) {
+            console.error("Error initiating subscription cancellation with payment service:", fetchError);
+            return res.status(500).json({ message: "Failed to initiate subscription cancellation with payment service." });
+        }
+
+        // Respond to the client that cancellation was initiated
+        res.status(200).json({
+            message: "Subscription cancellation initiated.",
+            status: paymentServiceResponseData.status // Status from payment service (e.g., 'canceled')
+        });
+
+    } catch (err) {
+        console.error("Error in cancel-subscription route:", err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+
 // Handles subscription cancellation confirmation (called by Payment Service Webhook/API)
 router.put("/:id/cancel-subscription-confirmed", paymentServiceAuth, async (req, res) => {
   const websiteId = req.params.id;

@@ -33,7 +33,8 @@ const websiteSchema = new mongoose.Schema({
     freeTrialEnded: { type: Boolean, default: false }, // Changed default to false, meaning trial is active or not started yet.
     lastProcessedPaymentId: { type: String, unique: true, sparse: true },
     stripeSubscriptionId: { type: String, default: null },
-    billedSuccessfuly: { type: Boolean, default: false }
+    billedSuccessfuly: { type: Boolean, default: false },
+    exlusiveCustomer: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model('Website', websiteSchema);
