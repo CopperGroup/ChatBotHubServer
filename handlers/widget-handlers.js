@@ -374,6 +374,7 @@ export async function handleWidgetMessage(socket, io, website, { chatId, email, 
             const dailyLimit = website.preferences.dailyTokenLimit ? todayTokenUsage < website.preferences.dailyTokenLimit : true;
             const aiConditionsMet = aiAllowedPlan && aiAllowedCredits && aiAllowedChatEnabled && aiAllowedWebsitePrefs && dailyLimit;
 
+            console.log(dailyLimit, website.preferences.dailyTokenLimit, todayTokenUsage)
             console.log(`SERVER FALLBACK: AI eligibility details:`);
             console.log(`   - Plan allows AI: ${aiAllowedPlan}`);
             console.log(`   - Remaining Credits: ${website.creditCount} (sufficient: ${aiAllowedCredits})`);
@@ -467,10 +468,10 @@ export async function handleWidgetMessage(socket, io, website, { chatId, email, 
             } else {
                 console.log("SERVER DEBUG: AI not engaged: All specific AI conditions failed. Sending generic fallback.");
                 // Ensure a response even if AI isn't used and no workflow message was generated
-                if (!botResponseText) { // If botResponseText is still null from workflow or AI
-                    botResponseText = multiLanguage["Please choose an option to continue."][website.preferences.language || "en"]; // Generic fallback
-                    senderTypeForResponse = "bot";
-                }
+                // if (!botResponseText) { // If botResponseText is still null from workflow or AI
+                //     botResponseText = multiLanguage["Please choose an option to continue."][website.preferences.language || "en"]; // Generic fallback
+                //     senderTypeForResponse = "bot";
+                // }
             }
 
             if (botResponseText && botMessage === null) {
