@@ -356,7 +356,7 @@ const multiLanguage = {
         fr: "Veuillez choisir une option pour continuer.",
         de: "Bitte wählen Sie eine Option, um fortzufahren.",
         es: "Por favor, elige una opción para continuar.",
-        it: "Per favore, scegli un'opzione per continuare.",
+        it: "Per favorire, scegli un'opzione per continuare.",
         pt: "Por favor, escolha uma opção para continuar.",
         ro: "Vă rugăm să alegeți o opțiune pentru a continua.",
         fi: "Ole hyvä ja valitse vaihtoehto jatkaaksesi."
@@ -373,6 +373,19 @@ const multiLanguage = {
         pt: "Ok, já transferi sua mensagem para a equipe, eles se juntarão a este chat em breve.",
         ro: "Ok, am transferat deja mesajul dumneavoastră echipei, se vor alătura acestui chat în curând.",
         fi: "Ok, olen jo välittänyt viestisi henkilökunnalle, he liittyvät tähän chattiin pian."
+    },
+    // NEWLY ADDED TEXT
+    "Error processing your message.": {
+        en: "Error processing your message.",
+        uk: "Помилка обробки вашого повідомлення.",
+        pl: "Błąd podczas przetwarzania wiadomości.",
+        fr: "Erreur lors du traitement de votre message.",
+        de: "Fehler beim Verarbeiten Ihrer Nachricht.",
+        es: "Error al procesar tu mensaje.",
+        it: "Errore durante l'elaborazione del tuo messaggio.",
+        pt: "Erro ao processar sua mensagem.",
+        ro: "Eroare la procesarea mesajului dvs.",
+        fi: "Virhe viestisi käsittelyssä."
     }
 };
 
