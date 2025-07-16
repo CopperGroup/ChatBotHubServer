@@ -28,7 +28,7 @@ export async function handleCreateNewChat(socket, io, website, { email }) {
             chatbotCode: website.chatbotCode,
             email,
             website: website._id,
-            name: "New Conversation",
+            name: email.split("@")[0],
             status: "open",
             aiResponsesEnabled: aiValidation.planAllowsAI && aiValidation.isValid,
             currentWorkflowBlockId: "start"
@@ -388,7 +388,7 @@ export async function handleWidgetMessage(socket, io, website, { chatId, email, 
             console.log(`    - Daily usage limit met: ${dailyLimit}`);
             console.log(`    - All AI conditions met: ${aiConditionsMet}`);
 
-            if (messages.length === 2 && chat.name === "New Conversation" && !aiConditionsMet) {
+            if (messages.length === 2 && chat.name === chat.email.split("@")[0] && !aiConditionsMet) {
                 chat.name = message;
                 aiBotMessage = {
                     sender: "bot",

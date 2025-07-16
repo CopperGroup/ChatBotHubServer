@@ -134,6 +134,14 @@
     socketScript.src = 'https://cdn.socket.io/4.7.2/socket.io.min.js';
     document.head.appendChild(socketScript);
 
+    const markedScript = document.createElement('script');
+    markedScript.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    document.head.appendChild(markedScript);
+
+    markedScript.onload = () => {
+        console.log("marked.js loaded");
+    };
+    
     socketScript.onload = () => {
         // Retrieve injected configurations
         const config = window.chatbotConfig || {};
@@ -604,6 +612,7 @@
             let avatarHtml = '';
             let iconSvg = '';
 
+            // ... (existing sender-specific styling and labels) ...
             if (sender === 'user') {
                 bubbleBg = `linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%)`;
                 bubbleTextColor = 'white';
@@ -656,7 +665,6 @@
                     ${iconSvg}
                     </div>
                 `;
-
             } else if (sender.startsWith('staff-')) { // This covers staff and owners (formatted as staff-<Name>)
                 const staffName = sender.split('-')[1];
                 bubbleBg = 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)';
@@ -693,6 +701,7 @@
                     ">${iconSvg}</div>
                 `;
             }
+            // ... (end of existing sender-specific styling and labels) ...
 
             const messageBubble = document.createElement('div');
             messageBubble.style.cssText = `
@@ -716,11 +725,15 @@
                 messageBubble.innerHTML += avatarHtml;
             }
 
+            // Convert Markdown to HTML here
+            // Ensure marked.js is loaded and available as `marked`
+            const markdownToHtml = typeof marked !== 'undefined' ? marked.parse(text) : text;
+
             messageBubble.innerHTML += `
                 <div style="font-weight: 700; font-size: 12px; margin-bottom: 6px; opacity: 0.8; letter-spacing: 0.02em; ${sender === 'user' ? 'color: rgba(255,255,255,0.8);' : ''}">
                     ${senderLabel}
                 </div>
-                <div style="font-weight: 400;">${text}</div>
+                <div style="font-weight: 400;">${markdownToHtml}</div>
                 <div style="font-size: 11px; opacity: 0.6; text-align: ${sender === 'user' ? 'right' : 'left'}; margin-top: 6px; ${sender === 'user' ? 'color: rgba(255,255,255,0.7);' : ''} font-weight: 400;">
                     ${new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -784,11 +797,11 @@
 
                                 renderMessage('user', optionText, new Date().toISOString());
                                 socket.emit("message", { chatbotCode, chatId: currentChatId, email: userEmail, message: optionText, currentWebsiteURL });
-                                
+
                                 // NEW: After selecting an option, explicitly hide the input field
                                 // and show the "Please choose an option" message.
                                 // It will be re-evaluated when the bot replies.
-                                updateInputAreaVisibility(false); 
+                                updateInputAreaVisibility(false);
                                 // console.log("Widget: Option clicked (user message sent). Hiding input field until bot replies.");
                             }
                         });
@@ -1489,4 +1502,5 @@
         updateInputAreaVisibility(isInputVisible);
         // --- END CRITICAL INITIALIZATION LOGIC ---
     }; // End of socketScript.onload function
+
 })(); // End of IIFE
