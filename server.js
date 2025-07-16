@@ -31,19 +31,19 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(async () => {console.log("MongoDB connected"), await initAllowedOrigins();})
+  .then(async () => { console.log("MongoDB connected"), await initAllowedOrigins(); })
   .catch((err) => console.error(err))
 
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.has(origin)) {
-          callback(null, true);
-        } else {
-          console.warn(`🚫 Blocked origin: ${origin}`);
-          callback(new Error("Origin not allowed by CORS"));
-        }
-    },      
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`🚫 Blocked origin: ${origin}`);
+        callback(new Error("Origin not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"]
   },
 })
@@ -87,6 +87,30 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
       return res.status(404).send("// Website not found for this chatbotCode")
     }
 
+    // --- INTEGRATED PAYMENT/TRIAL CHECK ---
+    let shouldDisplayWidget = true;
+    let reasonForNotDisplaying = '';
+
+    if (website.freeTrialPlanId) {
+      if (website.freeTrialEnded && !website.stripeSubscriptionId) {
+        shouldDisplayWidget = false;
+        reasonForNotDisplaying = `Free trial ended for website ${website._id} and no active subscription.`;
+      }
+    } else {
+      if (!website.stripeSubscriptionId && !website.exlusiveCustomer) {
+        shouldDisplayWidget = false;
+        reasonForNotDisplaying = `Website ${website._id} has no free trial and no active subscription or exclusive customer status.`;
+      }
+    }
+
+    if (!shouldDisplayWidget) {
+      console.log(`[Chatbot Widget] Not sending widget script for chatbotCode ${chatbotCode}. Reason: ${reasonForNotDisplaying}`);
+      // Send a 403 Forbidden status with a comment in the JS file
+      return res.status(403).type("application/javascript").send(`// Chatbot widget not loaded. Reason: ${reasonForNotDisplaying}`);
+    }
+    // --- END INTEGRATED PAYMENT/TRIAL CHECK ---
+
+
     const preferences = website.preferences || {}
     const gradient1 = preferences.colors?.gradient1 || "#667eea"
     const gradient2 = preferences.colors?.gradient2 || "#764ba2"
@@ -99,23 +123,23 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
     const selectedLanguage = website.preferences.language || "en";
     const translatedPhrases = {};
     for (const key in multiLanguage) {
-        if (multiLanguage.hasOwnProperty(key)) {
-            translatedPhrases[key] = multiLanguage[key][selectedLanguage] || key;
-        }
+      if (multiLanguage.hasOwnProperty(key)) {
+        translatedPhrases[key] = multiLanguage[key][selectedLanguage] || key;
+      }
     }
-    
+
     // Parameters to be injected into the client-side script
     const injectedConfig = {
-        gradient1,
-        gradient2,
-        headerText,
-        allowAIResponses,
-        allowedPaths,
-        disallowedPaths,
-        translatedPhrases,
-        chatbotCode,
-        socketIoUrl: process.env.SOCKET_URL,
-        backendUrl: process.env.BACKEND_URL
+      gradient1,
+      gradient2,
+      headerText,
+      allowAIResponses,
+      allowedPaths,
+      disallowedPaths,
+      translatedPhrases,
+      chatbotCode,
+      socketIoUrl: process.env.SOCKET_URL,
+      backendUrl: process.env.BACKEND_URL
     };
 
     console.log(injectedConfig)
@@ -125,6 +149,9 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
     let clientScriptContent = await fs.readFile(clientScriptPath, 'utf8');
 
     // Prepend the injected config to the client script content
+    // Note: The client-side script already has a checkAndToggleWidget() function
+    // that uses injectedAllowedPaths and injectedDisallowedPaths.
+    // The server-side check here is a primary gate.
     const fullScript = `window.chatbotConfig = ${JSON.stringify(injectedConfig)};\n${clientScriptContent}`;
 
     // Send the combined script as the response
