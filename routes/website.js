@@ -15,6 +15,15 @@ import {
   replaceAllowedOrigin,
 } from "../services/allowedOrigins.js";
 
+import {
+  subscriptionSuccessEmail,
+  subscriptionFailedEmail,
+  firstSubscriptionEmail,
+  tokenPurchaseSuccessEmail,
+  billingWarningEmail,
+  freeTrialEndWarningEmail,
+} from "../services/email.js"; // Import all email functions
+
 const router = express.Router();
 
 // --- Configuration for Plan Controller Service ---
@@ -202,6 +211,10 @@ router.post("/", async (req, res) => {
       nextBillingDate = new Date(freeTrialStartDate);
       nextBillingDate.setDate(nextBillingDate.getDate() + FREE_TRIAL_DURATION_DAYS);
       console.log(`[Main Service] Assigning Pro plan with ${FREE_TRIAL_DURATION_DAYS}-day free trial to first website for user ${userId}.`);
+
+      // Send first subscription/free trial email
+      await firstSubscriptionEmail(creatingUser.email, name, proPlan.name, nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+
     } else {
       // Not the first website, assign Pro plan without free trial (immediate billing)
       nextBillingDate = new Date();
@@ -506,11 +519,16 @@ router.put("/:id/confirm-plan-change", paymentServiceAuth, async (req, res) => {
     if (newPlan && newPlan.creditBoostMonthly > 0) {
       const now = new Date();
 
-        website.creditCount += newPlan.creditBoostMonthly;
-        website.lastCreditBoostDate = now;
+      website.creditCount += newPlan.creditBoostMonthly;
+      website.lastCreditBoostDate = now;
     }
 
     await website.save();
+
+    const user = await User.findById(website.owner);
+    if (user) {
+      await subscriptionSuccessEmail(user.email, website.name, newPlan.name, new Date(nextBillingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+    }
 
     // Inform Plan Controller Service about the updated plan state (successful payment)
     await sendPlanStateToPlanController(
@@ -543,6 +561,11 @@ router.put("/:id/billing-failed", paymentServiceAuth, async (req, res) => {
     website.billedSuccessfuly = false;
     await website.save();
 
+    const user = await User.findById(website.owner);
+    if (user) {
+      await subscriptionFailedEmail(user.email, website.name, website._id.toString());
+    }
+
     // Inform Plan Controller Service about the billing failure and next retry date
     // Plan Controller should handle setting next_billing_date to this retry date
     await sendPlanStateToPlanController(
@@ -561,76 +584,76 @@ router.put("/:id/billing-failed", paymentServiceAuth, async (req, res) => {
 });
 
 router.post("/:id/cancel-subscription", authMiddleware, async (req, res) => {
-    // Get userId from the authenticated token
-    const userId = req.user.id;
-    const websiteId = req.params.id;
-    const authToken = req.headers['x-auth-token']; // Pass user's auth token to payment service
+  // Get userId from the authenticated token
+  const userId = req.user.id;
+  const websiteId = req.params.id;
+  const authToken = req.headers['x-auth-token']; // Pass user's auth token to payment service
 
-    try {
-        const user = await User.findById(userId);
-        if (!user || !user.websites.includes(websiteId)) {
-            return res.status(403).json({ message: "Not authorized to cancel subscription for this website." });
-        }
-
-        const website = await Website.findById(websiteId);
-        if (!website) {
-            return res.status(404).json({ message: "Website not found." });
-        }
-
-        if (!website.stripeSubscriptionId) {
-            return res.status(400).json({ message: "No active Stripe subscription found for this website." });
-        }
-
-        // Call Payment Service to handle Stripe subscription cancellation
-        const PAYMENT_SERVICE_BASE_URL = process.env.PAYMENT_SERVICE_BASE_URL;
-        const PAYMENT_SERVICE_API_KEY = process.env.PAYMENT_SERVICE_API_KEY;
-
-        if (!PAYMENT_SERVICE_BASE_URL || !PAYMENT_SERVICE_API_KEY) {
-            console.error("Payment service URL or API key not configured in main service .env");
-            return res.status(500).json({ message: "Payment service configuration error." });
-        }
-
-        let paymentServiceResponseData;
-        try {
-            const response = await fetch(
-                `${PAYMENT_SERVICE_BASE_URL}/subscriptions/${website.stripeSubscriptionId}`, // Use the Stripe Subscription ID in the URL
-                {
-                    method: 'DELETE', // Use DELETE method
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-auth-token': authToken, // Pass user's auth token
-                        'x-main-service-api-key': PAYMENT_SERVICE_API_KEY // Authenticate main service to payment service
-                    },
-                    body: JSON.stringify({
-                        userId: userId, // Pass userId and websiteId in body for payment service to verify
-                        websiteId: websiteId
-                    })
-                }
-            );
-
-            if (!response.ok) {
-                const errorBody = await response.json().catch(() => ({ message: response.statusText }));
-                console.error(`Error response from payment service for subscription cancellation:`, errorBody);
-                throw new Error(`Payment service returned non-OK status: ${response.status} - ${errorBody.message || JSON.stringify(errorBody)}`);
-            }
-
-            paymentServiceResponseData = await response.json();
-
-        } catch (fetchError) {
-            console.error("Error initiating subscription cancellation with payment service:", fetchError);
-            return res.status(500).json({ message: "Failed to initiate subscription cancellation with payment service." });
-        }
-
-        // Respond to the client that cancellation was initiated
-        res.status(200).json({
-            message: "Subscription cancellation initiated.",
-            status: paymentServiceResponseData.status // Status from payment service (e.g., 'canceled')
-        });
-
-    } catch (err) {
-        console.error("Error in cancel-subscription route:", err.message);
-        res.status(500).send("Server Error");
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.websites.includes(websiteId)) {
+      return res.status(403).json({ message: "Not authorized to cancel subscription for this website." });
     }
+
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    if (!website.stripeSubscriptionId) {
+      return res.status(400).json({ message: "No active Stripe subscription found for this website." });
+    }
+
+    // Call Payment Service to handle Stripe subscription cancellation
+    const PAYMENT_SERVICE_BASE_URL = process.env.PAYMENT_SERVICE_BASE_URL;
+    const PAYMENT_SERVICE_API_KEY = process.env.PAYMENT_SERVICE_API_KEY;
+
+    if (!PAYMENT_SERVICE_BASE_URL || !PAYMENT_SERVICE_API_KEY) {
+      console.error("Payment service URL or API key not configured in main service .env");
+      return res.status(500).json({ message: "Payment service configuration error." });
+    }
+
+    let paymentServiceResponseData;
+    try {
+      const response = await fetch(
+        `${PAYMENT_SERVICE_BASE_URL}/subscriptions/${website.stripeSubscriptionId}`, // Use the Stripe Subscription ID in the URL
+        {
+          method: 'DELETE', // Use DELETE method
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': authToken, // Pass user's auth token
+            'x-main-service-api-key': PAYMENT_SERVICE_API_KEY // Authenticate main service to payment service
+          },
+          body: JSON.stringify({
+            userId: userId, // Pass userId and websiteId in body for payment service to verify
+            websiteId: websiteId
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error(`Error response from payment service for subscription cancellation:`, errorBody);
+        throw new Error(`Payment service returned non-OK status: ${response.status} - ${errorBody.message || JSON.stringify(errorBody)}`);
+      }
+
+      paymentServiceResponseData = await response.json();
+
+    } catch (fetchError) {
+      console.error("Error initiating subscription cancellation with payment service:", fetchError);
+      return res.status(500).json({ message: "Failed to initiate subscription cancellation with payment service." });
+    }
+
+    // Respond to the client that cancellation was initiated
+    res.status(200).json({
+      message: "Subscription cancellation initiated.",
+      status: paymentServiceResponseData.status // Status from payment service (e.g., 'canceled')
+    });
+
+  } catch (err) {
+    console.error("Error in cancel-subscription route:", err.message);
+    res.status(500).send("Server Error");
+  }
 });
 
 
@@ -724,6 +747,95 @@ router.put("/:id/free-trial-ended", async (req, res) => {
   }
 });
 
+router.put("/:id/free-trial-ended", async (req, res) => {
+  const websiteId = req.params.id;
+
+  const planControllerApiKeyHeader = req.headers['x-plan-controller-api-key'];
+  const expectedApiKey = process.env.PLAN_CONTROLLER_SERVICE_API_KEY;
+
+  if (!planControllerApiKeyHeader || planControllerApiKeyHeader !== expectedApiKey) {
+    console.warn(`[Main Service] Unauthorized access attempt to /free-trial-ended for website ${websiteId}.`);
+    return res.status(401).json({ message: "Unauthorized access: Invalid API Key." });
+  }
+
+  try {
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    if (website.freeTrial && website.freeTrialPlanId && !website.freeTrialEnded) {
+      const freePlan = await Plan.findOne({ name: "Free" });
+      if (!freePlan) {
+        return res.status(500).json({ message: "Free plan not found." });
+      }
+
+      website.plan = freePlan._id;
+      website.freeTrial = null;
+      website.freeTrialPlanId = null;
+      website.freeTrialEnded = true;
+      website.stripeSubscriptionId = null;
+      website.billedSuccessfuly = false;
+
+      await website.save();
+      console.log(`[Main Service] Website ${websiteId} free trial ended. Downgraded to Free plan.`);
+
+      // No need to inform Plan Controller here, as it initiated this event.
+      // The Plan Controller will handle clearing its internal free trial state after this notification.
+
+      res.status(200).json({ message: "Website plan downgraded due to free trial ending." });
+    } else {
+      console.log(`[Main Service] Website ${websiteId} received free trial ended notification but was not on active trial or trial already ended. No primary action taken.`);
+      res.status(200).json({ message: "Website not on active free trial or trial already ended; no primary action taken." });
+    }
+
+  } catch (err) {
+    console.error("Error handling free trial ended notification:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+
+// NEW ENDPOINT: Accept payment warning notifications from Plan Controller
+router.post("/:id/payment-warning", paymentServiceAuth, async (req, res) => {
+  const websiteId = req.params.id;
+  const { type, daysUntilEvent, nextBillingDate } = req.body; // type: 'billing' or 'free_trial_end'
+
+  try {
+    if (!type || !['billing', 'free_trial_end'].includes(type) || typeof daysUntilEvent === 'undefined') {
+      return res.status(400).json({ message: "Invalid request: Missing type, invalid type, or missing daysUntilEvent." });
+    }
+
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    const user = await User.findById(website.owner);
+    if (!user) {
+      console.warn(`[Main Service] User not found for website ${websiteId}. Cannot send warning email.`);
+      return res.status(404).json({ message: "User not found for this website." });
+    }
+
+    const formattedNextBillingDate = nextBillingDate ? new Date(nextBillingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
+
+    if (type === 'billing') {
+      await billingWarningEmail(user.email, website.name, website._id.toString(), daysUntilEvent, formattedNextBillingDate);
+      console.log(`[Main Service] Sent billing warning email for website ${websiteId}, due in ${daysUntilEvent} days.`);
+    } else if (type === 'free_trial_end') {
+      const currentPlan = await Plan.findById(website.plan);
+      await freeTrialEndWarningEmail(user.email, website.name, website._id.toString(), currentPlan ? currentPlan.name : 'your current plan', daysUntilEvent);
+      console.log(`[Main Service] Sent free trial end warning email for website ${websiteId}, ends in ${daysUntilEvent} days.`);
+    }
+
+    res.status(200).json({ message: `Payment warning notification processed for type: ${type}.` });
+
+  } catch (err) {
+    console.error(`[Main Service] Error processing payment warning for website ${websiteId}:`, err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 
 // Add credits (called by Payment Service)
 router.put("/:id/add-credits", paymentServiceAuth, async (req, res) => {
@@ -787,6 +899,12 @@ router.put("/:id/add-credits", paymentServiceAuth, async (req, res) => {
     website.lastProcessedPaymentId = paymentId;
     website.billedSuccessfuly = true;
     await website.save();
+
+    const user = await User.findById(website.owner);
+    if (user) {
+      await tokenPurchaseSuccessEmail(user.email, tokensToAdd, website.name);
+    }
+
 
     res.status(200).json({ message: "Credits added successfully.", newCreditCount: website.creditCount });
 
