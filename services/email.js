@@ -13,27 +13,25 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+// Reusable ChatBot Hub Logo (Base64 PNG for better email client compatibility)
 // Reusable ChatBot Hub Logo SVG
 const chatBotHubLogoSvg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #ffffff;">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-    </svg>
+<img src="${process.env.FRONTEND_URL}/assets/logo.png" alt="ChatBot Hub Logo" width="36" height="36" style="display: block;" />
+
 `;
 
 export const changePasswordLinkEmail = async (toEmail, resetLink) => {
     try {
         const mailOptions = {
-            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`, // Sender address (must be a verified sender in Brevo)
-            to: toEmail, // Recipient address
-            subject: 'Your ChatBot Hub Password Reset Request', // Subject line
+            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
+            to: toEmail,
+            subject: 'Your ChatBot Hub Password Reset Request',
             html: `
 <table style="font-family: 'Inter', Helvetica, Arial, sans-serif; width: 100%; max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); overflow: hidden;">
     <tr>
         <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #059669, #10B981); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #ffffff;">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-    </svg>
+                ${chatBotHubLogoSvg}
             </div>
             <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Reset Your ChatBot Hub Password</h1>
             <p style="font-size: 18px; color: #475569; line-height: 1.6;">It looks like you've requested a password reset for your ChatBot Hub account. No worries, we're here to help you get back in!</p>
@@ -57,7 +55,7 @@ export const changePasswordLinkEmail = async (toEmail, resetLink) => {
         </td>
     </tr>
 </table>
-            `, // HTML body
+            `,
         };
 
         await transporter.sendMail(mailOptions);
@@ -108,7 +106,6 @@ export const subscriptionSuccessEmail = async (toEmail, websiteName, planName, n
     }
 };
 
-
 export const subscriptionFailedEmail = async (toEmail, websiteName, websiteId) => {
     try {
         const mailOptions = {
@@ -151,7 +148,6 @@ export const subscriptionFailedEmail = async (toEmail, websiteName, websiteId) =
         console.error(`Error sending subscription failed email to ${toEmail}:`, error);
     }
 };
-
 
 export const firstSubscriptionEmail = async (toEmail, websiteName, planName, nextBillingDate) => {
     try {
@@ -234,5 +230,91 @@ export const tokenPurchaseSuccessEmail = async (toEmail, tokensAdded, websiteNam
         console.log(`Token purchase success email sent to: ${toEmail}`);
     } catch (error) {
         console.error(`Error sending token purchase success email to ${toEmail}:`, error);
+    }
+};
+
+export const billingWarningEmail = async (toEmail, websiteName, daysUntilBilling, nextBillingDate) => {
+    try {
+        const mailOptions = {
+            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
+            to: toEmail,
+            subject: `Heads Up! Your ChatBot Hub Subscription for ${websiteName} is Due Soon`,
+            html: `
+<table style="font-family: 'Inter', Helvetica, Arial, sans-serif; width: 100%; max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); overflow: hidden;">
+    <tr>
+        <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #FACC15, #F59E0B); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
+                ${chatBotHubLogoSvg}
+            </div>
+            <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Upcoming Payment for ${websiteName}</h1>
+            <p style="font-size: 18px; color: #475569; line-height: 1.6;">Just a friendly reminder that your subscription payment for <strong>${websiteName}</strong> is coming up soon.</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 32px; text-align: center;">
+            <p style="font-size: 18px; color: #475569; margin-bottom: 24px; line-height: 1.6;">Your next payment of is due in <strong>${daysUntilBilling} day${daysUntilBilling !== 1 ? 's' : ''}</strong> on <strong>${nextBillingDate}</strong>.</p>
+            <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">Please ensure your payment method is up to date to guarantee uninterrupted service for your chatbot. You can review your details anytime in your account settings.</p>
+            <a href="${process.env.FRONTEND_URL}/settings/billing" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
+                Manage Billing
+            </a>
+            <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">We appreciate you being a valued part of the ChatBot Hub community!</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 24px; text-align: center; border-top: 1px solid #E2E8F0; background-color: #F8FAFC;">
+            <p style="font-size: 15px; color: #475569; margin-bottom: 8px;">Cheers,</p>
+            <p style="font-size: 16px; font-weight: bold; color: #0F172A;">The ChatBot Hub Team</p>
+        </td>
+    </tr>
+</table>
+            `,
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Billing warning email sent to: ${toEmail}`);
+    } catch (error) {
+        console.error(`Error sending billing warning email to ${toEmail}:`, error);
+    }
+};
+
+export const freeTrialEndWarningEmail = async (toEmail, websiteName, daysUntilEnd) => {
+    try {
+        const mailOptions = {
+            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
+            to: toEmail,
+            subject: `Action Required: Your Free Trial for ${websiteName} Ends Soon!`,
+            html: `
+<table style="font-family: 'Inter', Helvetica, Arial, sans-serif; width: 100%; max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); overflow: hidden;">
+    <tr>
+        <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #FACC15, #F59E0B); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
+                ${chatBotHubLogoSvg}
+            </div>
+            <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Your Free Trial for ${websiteName} is Ending!</h1>
+            <p style="font-size: 18px; color: #475569; line-height: 1.6;">This is a friendly heads-up that your free trial for <strong>${websiteName}</strong> will end in just <strong>${daysUntilEnd} day${daysUntilEnd !== 1 ? 's' : ''}</strong>!</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 32px; text-align: center;">
+            <p style="font-size: 18px; color: #475569; margin-bottom: 24px; line-height: 1.6;">We hope you've loved using ChatBot Hub to boost your website's engagement. To continue enjoying all the premium features and seamless chatbot performance, simply subscribe to a plan before your trial expires.</p>
+            <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">Don't let your amazing chatbot go! Choose the perfect plan that fits your needs today:</p>
+            <a href="${process.env.FRONTEND_URL}/plans" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
+                Choose Your Plan
+            </a>
+            <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">If you have any questions or need help selecting a plan, our support team is ready to assist you.</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 24px; text-align: center; border-top: 1px solid #E2E8F0; background-color: #F8FAFC;">
+            <p style="font-size: 15px; color: #475569; margin-bottom: 8px;">Warmly,</p>
+            <p style="font-size: 16px; font-weight: bold; color: #0F172A;">The ChatBot Hub Team</p>
+        </td>
+    </tr>
+</table>
+            `,
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Free trial end warning email sent to: ${toEmail}`);
+    } catch (error) {
+        console.error(`Error sending free trial end warning email to ${toEmail}:`, error);
     }
 };

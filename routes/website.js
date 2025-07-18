@@ -20,7 +20,9 @@ import {
   subscriptionFailedEmail,
   firstSubscriptionEmail,
   tokenPurchaseSuccessEmail,
-} from "../services/email.js"; // Import new email functions
+  billingWarningEmail,      // NEW: Import billing warning email
+  freeTrialEndWarningEmail, // NEW: Import free trial end warning email
+} from "../services/email.js";
 
 const router = express.Router();
 
@@ -702,7 +704,7 @@ router.put("/:id/cancel-subscription-confirmed", paymentServiceAuth, async (req,
 });
 
 
-// NEW ENDPOINT: Free trial ended notification from Plan Controller Service
+// Free trial ended notification from Plan Controller Service
 router.put("/:id/free-trial-ended", async (req, res) => {
   const websiteId = req.params.id;
 
@@ -747,6 +749,46 @@ router.put("/:id/free-trial-ended", async (req, res) => {
 
   } catch (err) {
     console.error("Error handling free trial ended notification:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+
+// NEW ENDPOINT: Accept payment warning notifications from Plan Controller
+router.post("/:id/payment-warning", paymentServiceAuth, async (req, res) => {
+  const websiteId = req.params.id;
+  const { type, daysUntilEvent, nextBillingDate } = req.body; // type: 'billing' or 'free_trial_end'
+
+  try {
+    if (!type || !['billing', 'free_trial_end'].includes(type) || typeof daysUntilEvent === 'undefined') {
+      return res.status(400).json({ message: "Invalid request: Missing type, invalid type, or missing daysUntilEvent." });
+    }
+
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    const user = await User.findById(website.owner);
+    if (!user) {
+      console.warn(`[Main Service] User not found for website ${websiteId}. Cannot send warning email.`);
+      return res.status(404).json({ message: "User not found for this website." });
+    }
+
+    const formattedNextBillingDate = nextBillingDate ? new Date(nextBillingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
+
+    if (type === 'billing') {
+      await billingWarningEmail(user.email, website.name, daysUntilEvent, formattedNextBillingDate);
+      console.log(`[Main Service] Sent billing warning email for website ${websiteId}, due in ${daysUntilEvent} days.`);
+    } else if (type === 'free_trial_end') {
+      await freeTrialEndWarningEmail(user.email, website.name, daysUntilEvent);
+      console.log(`[Main Service] Sent free trial end warning email for website ${websiteId}, ends in ${daysUntilEvent} days.`);
+    }
+
+    res.status(200).json({ message: `Payment warning notification processed for type: ${type}.` });
+
+  } catch (err) {
+    console.error(`[Main Service] Error processing payment warning for website ${websiteId}:`, err.message);
     res.status(500).send("Server Error");
   }
 });
