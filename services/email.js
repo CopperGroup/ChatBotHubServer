@@ -233,7 +233,7 @@ export const tokenPurchaseSuccessEmail = async (toEmail, tokensAdded, websiteNam
     }
 };
 
-export const billingWarningEmail = async (toEmail, websiteName, daysUntilBilling, nextBillingDate) => {
+export const billingWarningEmail = async (toEmail, websiteName, websiteId, daysUntilBilling, nextBillingDate) => {
     try {
         const mailOptions = {
             from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
@@ -254,7 +254,7 @@ export const billingWarningEmail = async (toEmail, websiteName, daysUntilBilling
         <td style="padding: 32px; text-align: center;">
             <p style="font-size: 18px; color: #475569; margin-bottom: 24px; line-height: 1.6;">Your next payment of is due in <strong>${daysUntilBilling} day${daysUntilBilling !== 1 ? 's' : ''}</strong> on <strong>${nextBillingDate}</strong>.</p>
             <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">Please ensure your payment method is up to date to guarantee uninterrupted service for your chatbot. You can review your details anytime in your account settings.</p>
-            <a href="${process.env.FRONTEND_URL}/settings/billing" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
+            <a href="${process.env.FRONTEND_URL}/websites/${websiteId}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
                 Manage Billing
             </a>
             <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">We appreciate you being a valued part of the ChatBot Hub community!</p>
@@ -276,7 +276,7 @@ export const billingWarningEmail = async (toEmail, websiteName, daysUntilBilling
     }
 };
 
-export const freeTrialEndWarningEmail = async (toEmail, websiteName, daysUntilEnd) => {
+export const freeTrialEndWarningEmail = async (toEmail, websiteName, websiteId, currentPlanId, daysUntilEnd) => {
     try {
         const mailOptions = {
             from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
@@ -297,7 +297,7 @@ export const freeTrialEndWarningEmail = async (toEmail, websiteName, daysUntilEn
         <td style="padding: 32px; text-align: center;">
             <p style="font-size: 18px; color: #475569; margin-bottom: 24px; line-height: 1.6;">We hope you've loved using ChatBot Hub to boost your website's engagement. To continue enjoying all the premium features and seamless chatbot performance, simply subscribe to a plan before your trial expires.</p>
             <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">Don't let your amazing chatbot go! Choose the perfect plan that fits your needs today:</p>
-            <a href="${process.env.FRONTEND_URL}/plans" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
+            <a href="${process.env.FRONTEND_URL}/pricing?websiteId=${websiteId}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FACC15, #F59E0B); color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2); transition: all 0.3s ease-in-out; transform: translateY(0);">
                 Choose Your Plan
             </a>
             <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">If you have any questions or need help selecting a plan, our support team is ready to assist you.</p>

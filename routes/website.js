@@ -778,10 +778,10 @@ router.post("/:id/payment-warning", paymentServiceAuth, async (req, res) => {
     const formattedNextBillingDate = nextBillingDate ? new Date(nextBillingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
 
     if (type === 'billing') {
-      await billingWarningEmail(user.email, website.name, daysUntilEvent, formattedNextBillingDate);
+      await billingWarningEmail(user.email, website.name, website._id.toString(), daysUntilEvent, formattedNextBillingDate);
       console.log(`[Main Service] Sent billing warning email for website ${websiteId}, due in ${daysUntilEvent} days.`);
     } else if (type === 'free_trial_end') {
-      await freeTrialEndWarningEmail(user.email, website.name, daysUntilEvent);
+      await freeTrialEndWarningEmail(user.email, website.name, website._id.toString(), website.plan._id.toString(), daysUntilEvent);
       console.log(`[Main Service] Sent free trial end warning email for website ${websiteId}, ends in ${daysUntilEvent} days.`);
     }
 
