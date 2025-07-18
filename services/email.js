@@ -31,7 +31,9 @@ export const changePasswordLinkEmail = async (toEmail, resetLink) => {
     <tr>
         <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #059669, #10B981); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
-                ${chatBotHubLogoSvg}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #ffffff;">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+    </svg>
             </div>
             <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Reset Your ChatBot Hub Password</h1>
             <p style="font-size: 18px; color: #475569; line-height: 1.6;">It looks like you've requested a password reset for your ChatBot Hub account. No worries, we're here to help you get back in!</p>
