@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 // Reusable ChatBot Hub Logo (Base64 PNG for better email client compatibility)
 // Reusable ChatBot Hub Logo SVG
 const chatBotHubLogoSvg = `
-<img src="${process.env.FRONTEND_URL}/assets/logo.png" alt="ChatBot Hub Logo" width="36" height="36" style="display: block;" />
+<img src="https://chat-bot-hub.vercel.app/assets/logo.png" alt="ChatBot Hub Logo" width="80" height="80" style="display: block;" />
 
 `;
 
