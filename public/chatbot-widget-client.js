@@ -12,6 +12,8 @@
     let currentWebsiteURL;
     let socketIoUrl; // This will be passed from server.js
     let backendUrl;
+    let currentLangCode; // Injected language code from the server (default or detected)
+    let dynamicLanguage; // Injected boolean to enable/disable dynamic language detection
 
     // Global widget variables
     let userEmail = localStorage.getItem('chatbotEmail');
@@ -30,8 +32,8 @@
         function checkVisibility() {
             // Retrieve injectedAllowedPaths and injectedDisallowedPaths directly
             // inside checkVisibility to ensure they are updated after config load.
-            const allowed = injectedAllowedPaths; 
-            const disallowed = injectedDisallowedPaths; 
+            const allowed = injectedAllowedPaths;
+            const disallowed = injectedDisallowedPaths;
     
             // Add a safety check for 'undefined' or 'null' values for allowed/disallowed
             // before trying to access .length or .some().
@@ -142,7 +144,7 @@
         console.log("marked.js loaded");
     };
     
-    socketScript.onload = () => {
+    socketScript.onload = async () => { // Made async to await language fetching
         // Retrieve injected configurations
         const config = window.chatbotConfig || {};
         gradientColor1 = config.gradient1;
@@ -151,11 +153,90 @@
         allowAIResponsesFromBackend = config.allowAIResponses;
         injectedAllowedPaths = config.allowedPaths;
         injectedDisallowedPaths = config.disallowedPaths;
-        t = config.translatedPhrases;
+        // t = config.translatedPhrases; // This will now be loaded dynamically
+        currentLangCode = config.language; // Server-injected default or detected language
+        dynamicLanguage = config.allowDynamicLanguage; // Server-injected boolean
         chatbotCode = config.chatbotCode;
         currentWebsiteURL = window.location.href; // Still get current URL from client
         socketIoUrl = config.socketIoUrl; // Injected from server
-        backendUrl=config.backendUrl
+        backendUrl = config.backendUrl;
+
+        // --- LANGUAGE DETECTION AND LOADING LOGIC ---
+        let browserLanguage = navigator.language || navigator.userLanguage;
+        let languageCode = browserLanguage.split('-')[0]; // Take the first part (e.g., "en" from "en-US")
+
+        if (dynamicLanguage) {
+            try {
+                // Fetch possible languages from the backend first
+                const languagesResponse = await fetch(`${backendUrl}/getPossibleLanguages`);
+                if (!languagesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${languagesResponse.status}`);
+                }
+                const possibleLanguages = await languagesResponse.json();
+
+                let languageToFetch = languageCode;
+
+                if (!possibleLanguages.includes(languageCode)) {
+                    if (languageCode !== "en") {
+                        languageToFetch = "en"; // Fallback to English if browser language not supported and not already English
+                    } else {
+                        // If browser language is "en" but not in possibleLanguages (shouldn't happen if "en" is default)
+                        // Or if possibleLanguages is empty, we still default to "en" implicitly.
+                        console.warn("Chatbot: Browser language 'en' not in possible languages or list is empty. Using 'en' as fallback.");
+                        languageToFetch = "en";
+                    }
+                }
+                
+                // Make the request to get interface language translations
+                const translationResponse = await fetch(`${backendUrl}/getInterfaceLanguage/${languageToFetch}`);
+                if (!translationResponse.ok) {
+                    throw new Error(`HTTP error! status: ${translationResponse.status}`);
+                }
+                t = await translationResponse.json();
+                console.log(`Chatbot: Loaded translations for: ${languageToFetch}`);
+
+            } catch (error) {
+                console.error("Chatbot: Error fetching dynamic language translations:", error);
+                // Fallback to server-injected 't' if dynamic loading fails or use a hardcoded default
+                // If config.translatedPhrases is available, use it as a last resort.
+                t = config.translatedPhrases || {
+                    "We're here to help!": "We're here to help!",
+                    "Welcome!": "Welcome!",
+                    "Please enter your email address to start a conversation with our support team.": "Please enter your email address to start a conversation with our support team.",
+                    "Enter your email address": "Enter your email address",
+                    "Start Conversation": "Start Conversation",
+                    "Your Conversations": "Your Conversations",
+                    "Select a chat or start new one": "Select a chat or start new one",
+                    "Live Chat": "Live Chat",
+                    "Connected with support": "Connected with support",
+                    "No conversations yet": "No conversations yet",
+                    "Click \"Start New Conversation\" to begin!": "Click \"Start New Conversation\" to begin!",
+                    "✨ Start New Conversation": "✨ Start New Conversation",
+                    "Type your message...": "Type your message...",
+                    "Please choose an option to continue.": "Please choose an option to continue.",
+                    "You": "You",
+                    "Bot": "Bot",
+                    "AI Assistant": "AI Assistant",
+                    "Support Team": "Support Team",
+                    "Owner": "Owner",
+                    "Error loading chat history.": "Error loading chat history.",
+                    "Error loading your chats.": "Error loading your chats.",
+                    "Created:": "Created:",
+                    "Last Update:": "Last Update:",
+                    "Click to view conversation": "Click to view conversation",
+                    "open": "open",
+                    "closed": "closed",
+                    "Error starting a new chat.": "Error starting a new chat.",
+                    "This conversation has been closed.": "This conversation has been closed."
+                };
+                console.log("Chatbot: Falling back to default or server-injected translations.");
+            }
+        } else {
+            // If dynamicLanguage is false, use the server-injected translated phrases directly
+            t = config.translatedPhrases;
+            console.log("Chatbot: Dynamic language disabled. Using server-injected translations.");
+        }
+        // --- END LANGUAGE DETECTION AND LOADING LOGIC ---
 
         // --- CSS Styles and Animations ---
         const style = document.createElement('style');
@@ -199,6 +280,17 @@
             .chatbot-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #cbd5e1, #94a3b8); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); }
             .chatbot-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #94a3b8, #64748b); }
             
+            .message-bubble a {
+                color: #10b981; /* Default to Tailwind's emerald-500 */
+                text-decoration: underline;
+                font-weight: 600; /* Keep bold for emphasis */
+                transition: all 0.2s ease-in-out;
+            }
+
+            .message-bubble a:hover {
+                color: #059669; /* Slightly darker emerald for hover state (emerald-600) */
+                text-decoration: none; /* Remove underline on hover for a cleaner look */
+            }
             @media (max-width: 440px) { #chat-window { width: 100%; max-width: 340px; } #chatbot-widget { right: 12px !important; bottom: 12px !important; } }
             @media (max-width: 360px) { #chat-window { width: 100%; max-width: 320px; } #chatbot-widget { right: 10px !important; bottom: 10px !important; } #chatbot-input-area { padding: 14px !important; } #msg { padding: 10px 14px !important; } #sendBtn { padding: 10px 14px !important; } }
             @media (max-width: 340px) { #chat-window { width: 100%; max-width: 310px; } #chatbot-widget { right: 8px !important; bottom: 8px !important; } }
@@ -924,7 +1016,7 @@
                 // console.log("Widget: updateInputAreaVisibility: Hiding input field, showing status message.");
             }
             // Ensure the main input area container is visible (opacity handled by showView)
-            inputArea.style.display = 'block'; 
+            inputArea.style.display = 'block';
             inputArea.style.opacity = '1';
         };
         
@@ -1111,7 +1203,7 @@
             messagesContainer.innerHTML = '';
             
             // When going back to chat list, reset input visibility to default (visible)
-            updateInputAreaVisibility(true); 
+            updateInputAreaVisibility(true);
 
             if (!userEmail) {
                 showView('email');
@@ -1174,14 +1266,14 @@
                 let userRepliedAfterLastOptions = false;
 
                 loadedMessages.forEach((msg, index) => {
-                    let isReplySentForThisOptionsBlock = false; 
+                    let isReplySentForThisOptionsBlock = false;
                     if (msg.options && msg.options.length > 0) {
                         lastBotMessageWithOptionsPresent = true; // Flag that we encountered options
                         userRepliedAfterLastOptions = false; // Reset for this options block
                         for (let i = index + 1; i < loadedMessages.length; i++) {
                             if (loadedMessages[i].sender === 'user') {
                                 userRepliedAfterLastOptions = true;
-                                break; 
+                                break;
                             }
                         }
                         isReplySentForThisOptionsBlock = userRepliedAfterLastOptions;
@@ -1190,7 +1282,7 @@
                         // it means the bot continued the conversation without needing options.
                         // If it's a user message, it means the user replied.
                         // In either case, subsequent messages mean options were "resolved"
-                        lastBotMessageWithOptionsPresent = false; 
+                        lastBotMessageWithOptionsPresent = false;
                     }
                     renderMessage(msg.sender, msg.text, msg.timestamp, msg.options, isReplySentForThisOptionsBlock);
                 });
@@ -1214,7 +1306,7 @@
                     // console.log("Widget: Load: No unresolved options or chat is open. Input will be shown.");
                 }
 
-                messagesContainer.scrollTop = messagesContainer.scrollHeight; 
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 // --- END CRITICAL REFINED LOGIC ---
                 
             } catch (error) {
@@ -1362,7 +1454,7 @@
                 messagesContainer.innerHTML = '';
                 showView('chat', 'right');
                 // When starting a new chat, the input should always be visible
-                updateInputAreaVisibility(true); 
+                updateInputAreaVisibility(true);
 
                 // console.log("Widget: Emitting 'create_new_chat'.");
                 socket.emit("create_new_chat", { chatbotCode, email: userEmail });
@@ -1472,7 +1564,7 @@
                         const optionButtons = lastMessageElement.querySelectorAll('.option-button');
                         // If the last message in the UI *still* has active options, keep input hidden
                         if (optionButtons.length > 0 && Array.from(optionButtons).some(btn => !btn.disabled)) {
-                            updateInputAreaVisibility(false); 
+                            updateInputAreaVisibility(false);
                         } else {
                             // No options in the last message, or options were disabled, so show input.
                             updateInputAreaVisibility(true);

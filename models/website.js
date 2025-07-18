@@ -20,6 +20,7 @@ const websiteSchema = new mongoose.Schema({
             header: 'Chat Support',
             allowAIResponses: false,
             language: "en",
+            dynamiclyAdaptToLanguage: false,
             allowedPaths: [],
             disallowedPaths: [],
             dailyTokenLimit: null

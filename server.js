@@ -13,7 +13,7 @@ import Website from "./models/website.js"
 import dotenv from "dotenv"
 import { transactionRoutes } from "./routes/transaction.js"
 import { allowedOrigins, initAllowedOrigins } from "./services/allowedOrigins.js"
-import multiLanguage from "./services/multiLanguage.js"
+import multiLanguage from "./services/multiLanguage.js" // This contains your translations
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises'; // Import Node.js file system promises API
@@ -62,6 +62,70 @@ app.use("/api/chats", chatRoutes)
 app.use("/api/staff", staffRoutes)
 app.use("/api/plans", planRoutes)
 
+// --- New Language Routes ---
+/**
+ * @route GET /getPossibleLanguages
+ * @description Returns a list of all language codes available in multiLanguage.js.
+ * This is used by the client-side widget to determine if a browser language is supported.
+ * @access Public
+ */
+app.get("/getPossibleLanguages", (req, res) => {
+  try {
+    const languages = Object.values(multiLanguage)
+      .map(translations => Object.keys(translations))
+      .reduce((acc, current) => acc.concat(current), [])
+      .filter((value, index, self) => self.indexOf(value) === index); // Get unique language codes
+
+    res.json(languages);
+  } catch (error) {
+    console.error("Error getting possible languages:", error);
+    res.status(500).json({ message: "Error retrieving possible languages." });
+  }
+});
+
+/**
+ * @route GET /getInterfaceLanguage/:languageCode
+ * @description Returns the translation object for a specific language code.
+ * This is used by the client-side widget to load dynamic translations.
+ * @param {string} languageCode - The language code (e.g., 'en', 'es').
+ * @access Public
+ */
+app.get("/getInterfaceLanguage/:languageCode", (req, res) => {
+  const { languageCode } = req.params;
+
+  // Assume multiLanguage is structured as { "phraseKey": { "en": "English phrase", "es": "Spanish phrase" } }
+  // We need to transform it to { "phraseKey": "Translated phrase" } for the client.
+  const translationsForLang = {};
+  let foundTranslations = false;
+
+  for (const key in multiLanguage) {
+    if (multiLanguage.hasOwnProperty(key)) {
+      if (multiLanguage[key][languageCode]) {
+        translationsForLang[key] = multiLanguage[key][languageCode];
+        foundTranslations = true;
+      } else {
+        // Fallback to English if a specific translation is missing for the requested language
+        translationsForLang[key] = multiLanguage[key]["en"] || key; // Use the key itself if English is also missing
+      }
+    }
+  }
+
+  if (!foundTranslations && languageCode !== 'en') {
+    // If no specific translations were found for the requested language, and it's not English,
+    // it implies the language isn't fully supported. Return English translations.
+    console.warn(`No specific translations found for ${languageCode}. Falling back to English.`);
+    const englishTranslations = {};
+    for (const key in multiLanguage) {
+      if (multiLanguage.hasOwnProperty(key)) {
+        englishTranslations[key] = multiLanguage[key]["en"] || key;
+      }
+    }
+    return res.json(englishTranslations);
+  }
+  
+  res.json(translationsForLang);
+});
+// --- End New Language Routes ---
 
 app.get("/widget/chatbot-widget.js", async (req, res) => {
   const chatbotCode = req.query.chatbotCode
@@ -118,15 +182,22 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
     const allowAIResponses = preferences.allowAIResponses || false
     const allowedPaths = preferences.allowedPaths || []
     const disallowedPaths = preferences.disallowedPaths || []
-    console.log(headerText)
+    const allowDynaminLanguage = preferences.dynamiclyAdaptToLanguage || false
 
+    // No longer pre-fetching all translated phrases here if dynamicLanguage is true
     const selectedLanguage = website.preferences.language || "en";
-    const translatedPhrases = {};
-    for (const key in multiLanguage) {
-      if (multiLanguage.hasOwnProperty(key)) {
-        translatedPhrases[key] = multiLanguage[key][selectedLanguage] || key;
+    let translatedPhrases = {}; // Initialize as empty, client will fetch if dynamic
+
+    // If dynamic language is allowed, the client will fetch its own translations.
+    // Otherwise, we inject the server's configured language directly.
+    if (!allowDynaminLanguage) {
+      for (const key in multiLanguage) {
+        if (multiLanguage.hasOwnProperty(key)) {
+          translatedPhrases[key] = multiLanguage[key][selectedLanguage] || key;
+        }
       }
     }
+
 
     // Parameters to be injected into the client-side script
     const injectedConfig = {
@@ -136,8 +207,10 @@ app.get("/widget/chatbot-widget.js", async (req, res) => {
       allowAIResponses,
       allowedPaths,
       disallowedPaths,
-      translatedPhrases,
+      translatedPhrases, // This will be empty if allowDynaminLanguage is true
       chatbotCode,
+      language: selectedLanguage, // Still pass the server's configured language
+      allowDynamicLanguage: allowDynaminLanguage, // Corrected variable name
       socketIoUrl: process.env.SOCKET_URL,
       backendUrl: process.env.BACKEND_URL
     };
