@@ -301,6 +301,29 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.get("/by-shopify-token", paymentServiceAuth, async (req, res) => {
+  const { shopifyAccessToken } = req.query;
+
+  try {
+    if (!shopifyAccessToken) {
+      return res.status(400).json({ message: "Shopify Access Token is required." });
+    }
+
+    const website = await Website.findOne({ shopifyAccessToken: String(shopifyAccessToken) })
+      .populate("plan")
+      .populate({ path: "owner", select: "-password" });
+
+    if (!website) {
+      return res.status(404).json({ message: "Website not found with the provided Shopify Access Token." });
+    }
+
+    res.json(website);
+  } catch (err) {
+    console.error("Error finding website by Shopify token:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 // Update website (no changes related to plans)
 router.put("/:id", authMiddleware, async (req, res) => {
   const { name, link, description, preferences, language, userId, predefinedAnswers } = req.body;
