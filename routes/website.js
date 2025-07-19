@@ -300,30 +300,29 @@ router.get("/:id", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-
-router.get("/by-shopify-token", paymentServiceAuth, async (req, res) => {
-  const { shopifyAccessToken } = req.query;
+// NEW ROUTE: Find Website by Link (for internal use, e.g., by Next.js API)
+router.get("/by-link", authMiddleware, async (req, res) => {
+  const { link } = req.query;
 
   try {
-    if (!shopifyAccessToken) {
-      return res.status(400).json({ message: "Shopify Access Token is required." });
+    if (!link) {
+      return res.status(400).json({ message: "Website link is required." });
     }
 
-    const website = await Website.findOne({ shopifyAccessToken: String(shopifyAccessToken) })
+    const website = await Website.findOne({ link: String(link) })
       .populate("plan")
       .populate({ path: "owner", select: "-password" });
 
     if (!website) {
-      return res.status(404).json({ message: "Website not found with the provided Shopify Access Token." });
+      return res.status(404).json({ message: "Website not found with the provided link." });
     }
 
     res.json(website);
   } catch (err) {
-    console.error("Error finding website by Shopify token:", err.message);
+    console.error("Error finding website by link:", err.message);
     res.status(500).send("Server Error");
   }
 });
-
 // Update website (no changes related to plans)
 router.put("/:id", authMiddleware, async (req, res) => {
   const { name, link, description, preferences, language, userId, predefinedAnswers } = req.body;
