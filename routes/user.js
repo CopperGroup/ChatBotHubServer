@@ -161,13 +161,13 @@ router.post('/internal-auth-for-shopify', async (req, res) => {
         }
         await user.save(); // Save updates to shopifyUserId/shopifyUserAccessToken
 
-        const payload = { user: { id: user.id, email: user.email } };
+        const payload = { user: { id: user._id, email: user.email } };
         jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
             res.json({
                 message: 'User authenticated internally',
                 token,
-                user: { id: user.id, email: user.email, websites: user.websites }
+                user: { id: user._id, email: user.email, websites: user.websites }
             });
         });
 
