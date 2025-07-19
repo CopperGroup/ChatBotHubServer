@@ -35,7 +35,9 @@ const websiteSchema = new mongoose.Schema({
     lastProcessedPaymentId: { type: String, unique: true, sparse: true },
     stripeSubscriptionId: { type: String, default: null },
     billedSuccessfuly: { type: Boolean, default: false },
-    exlusiveCustomer: { type: Boolean, default: false }
+    exlusiveCustomer: { type: Boolean, default: false },
+    // NEW: Field to store Shopify access token
+    shopifyAccessToken: { type: String, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('Website', websiteSchema);

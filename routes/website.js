@@ -178,7 +178,7 @@ async function sendNextBillingDateToPlanController(websiteId, nextBillingDate) {
 
 // Create Website
 router.post("/", async (req, res) => {
-  const { name, link, description, chatbotCode, userId, preferences } = req.body;
+  const { name, link, description, chatbotCode, userId, preferences, shopifyAccessToken } = req.body;
 
   try {
     if (!userId) {
@@ -190,8 +190,17 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ message: "Creating user not found." });
     }
 
+    // Check if a website with this chatbotCode already exists
     let website = await Website.findOne({ chatbotCode });
     if (website) {
+      // If a website with this chatbotCode already exists, it means it's an attempt to
+      // create a duplicate or the code isn't unique enough.
+      // For Shopify integration, we typically would either update an existing website
+      // based on `link` (shop URL) and `owner`, or create a truly new one.
+      // The current `router.post` handles only creation of new websites.
+      // If your Next.js route is designed to *always* create, this might be ok,
+      // but if it's meant to handle updates too, that logic needs to be in this Express route.
+      // For now, adhering strictly to the `chatbotCode` unique constraint check provided.
       return res.status(400).json({ message: "Chatbot code already in use." });
     }
 
@@ -242,6 +251,7 @@ router.post("/", async (req, res) => {
       freeTrial: freeTrialStartDate,
       freeTrialPlanId: freeTrialPlanId,
       freeTrialEnded: false,
+      shopifyAccessToken: shopifyAccessToken || null, // Save the Shopify access token if provided
     });
 
     await website.save();
@@ -264,6 +274,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+
 
 // Get all websites (no changes)
 router.get("/", async (req, res) => {

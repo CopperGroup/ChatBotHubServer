@@ -141,7 +141,7 @@
     document.head.appendChild(markedScript);
 
     markedScript.onload = () => {
-        console.log("marked.js loaded");
+        // console.log("marked.js loaded");
     };
     
     socketScript.onload = async () => { // Made async to await language fetching
@@ -234,7 +234,7 @@
         } else {
             // If dynamicLanguage is false, use the server-injected translated phrases directly
             t = config.translatedPhrases;
-            console.log("Chatbot: Dynamic language disabled. Using server-injected translations.");
+            // console.log("Chatbot: Dynamic language disabled. Using server-injected translations.");
         }
         // --- END LANGUAGE DETECTION AND LOADING LOGIC ---
 
@@ -1511,7 +1511,7 @@
         
         // Socket event listeners
         socket.on("connect", () => {
-            console.log("Chatbot connected:");
+            // console.log("Chatbot connected:");
         });
         
         socket.on("new_chat_data", (data) => {

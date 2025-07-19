@@ -67,46 +67,112 @@ router.post('/register', async (req, res) => {
 // @desc    Authenticate user & get token
 // @access  Public
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, shopifyUserId, shopifyUserAccessToken } = req.body;
 
     try {
-        // Basic validation
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required' });
+        // Scenario 1: Standard email/password login
+        if (email && password) {
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(400).json({ message: 'Invalid Credentials' });
+            }
+
+            const isMatch = await user.comparePassword(password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Invalid Credentials' });
+            }
+
+            const payload = { user: { id: user.id, email: user.email } };
+            jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
+                if (err) throw err;
+                res.json({
+                    message: 'Logged in successfully',
+                    token,
+                    user: { id: user.id, email: user.email, websites: user.websites } // Include websites count
+                });
+            });
+        }
+        // Scenario 2: Shopify-based login (if user already has shopifyUserId linked)
+        else if (shopifyUserId && shopifyUserAccessToken) {
+            const user = await User.findOne({ shopifyUserId });
+
+            if (!user) {
+                return res.status(400).json({ message: 'No user found with this Shopify ID. Please register or link your account.' });
+            }
+
+            // Optionally, you might want to re-verify the shopifyUserAccessToken with Shopify here
+            // to ensure it's still valid, though often it's assumed valid if present.
+            // For simplicity, we'll proceed if a user with the shopifyUserId is found.
+
+            // Update the access token in case it's refreshed or new
+            user.shopifyUserAccessToken = shopifyUserAccessToken;
+            await user.save();
+
+            const payload = { user: { id: user.id, email: user.email } };
+            jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
+                if (err) throw err;
+                res.json({
+                    message: 'Logged in successfully via Shopify',
+                    token,
+                    user: { id: user.id, email: user.email, websites: user.websites } // Include websites count
+                });
+            });
+        }
+        else {
+            return res.status(400).json({ message: 'Email and password, or Shopify credentials are required.' });
         }
 
-        // Check if user exists
-        const user = await User.findOne({ email });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST /api/users/internal-auth-for-shopify
+// @desc    Internal endpoint for Shopify to get JWT for existing user
+// @access  Private (Internal API Key)
+router.post('/internal-auth-for-shopify', async (req, res) => {
+    const { email, shopifyUserId, shopifyUserAccessToken } = req.body;
+    const internalApiKey = req.headers['x-internal-api-key'];
+
+    // Secure this endpoint with an internal API key
+    if (!internalApiKey || internalApiKey !== process.env.INTERNAL_BACKEND_API_KEY_FOR_SHOPIFY_AUTH) {
+        console.error("Unauthorized access to internal-auth-for-shopify endpoint.");
+        return res.status(401).json({ message: 'Unauthorized: Invalid internal API Key.' });
+    }
+
+    try {
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required.' });
+        }
+
+        let user = await User.findOne({ email });
+
         if (!user) {
-            return res.status(400).json({ message: 'Invalid Credentials' });
+            return res.status(404).json({ message: 'User not found.' });
         }
 
-        // Compare password (using method from user model)
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid Credentials' });
+        // Update user's Shopify ID and token if provided (e.g., on first link or re-auth)
+        if (shopifyUserId) {
+            user.shopifyUserId = shopifyUserId;
         }
+        if (shopifyUserAccessToken) {
+            user.shopifyUserAccessToken = shopifyUserAccessToken;
+        }
+        await user.save(); // Save updates to shopifyUserId/shopifyUserAccessToken
 
-        // Generate JWT
-        const payload = {
-            user: {
-                id: user.id,
-                email: user.email,
-            },
-        };
-
+        const payload = { user: { id: user.id, email: user.email } };
         jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
-            // Return token and basic user info (id, email)
             res.json({
-                message: 'Logged in successfully',
+                message: 'User authenticated internally',
                 token,
-                user: { id: user.id, email: user.email } // Only send id and email
+                user: { id: user.id, email: user.email, websites: user.websites }
             });
         });
 
     } catch (err) {
-        console.error(err.message);
+        console.error("Error in internal-auth-for-shopify:", err.message);
         res.status(500).send('Server Error');
     }
 });
