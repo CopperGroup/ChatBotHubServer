@@ -306,8 +306,10 @@ router.put("/:id", authMiddleware, async (req, res) => {
   const { name, link, description, preferences, language, userId, predefinedAnswers } = req.body;
   const websiteId = req.params.id;
 
+
   try {
     const user = await User.findById(userId);
+    console.warn(websiteId, userId, user.websites, user.websites.includes(websiteId))
     if (!user || !user.websites.includes(websiteId)) {
       return res.status(403).json({ message: "Not authorized to update this website." });
     }
