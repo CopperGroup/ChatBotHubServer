@@ -13,10 +13,9 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// Reusable ChatBot Hub Logo (Base64 PNG for better email client compatibility)
 // Reusable ChatBot Hub Logo SVG
 const chatBotHubLogoSvg = `
-<img src="https://chat-bot-hub.vercel.app/assets/logo.png" alt="ChatBot Hub Logo" width="80" height="80" style="display: block;" />
+<img src="https://chat-bot-hub.vercel.app/assets/logo.png" alt="ChatBot Hub Logo" width="70" height="70" />
 
 `;
 
@@ -316,5 +315,88 @@ export const freeTrialEndWarningEmail = async (toEmail, websiteName, websiteId, 
         console.log(`Free trial end warning email sent to: ${toEmail}`);
     } catch (error) {
         console.error(`Error sending free trial end warning email to ${toEmail}:`, error);
+    }
+};
+
+export const adminSubscriptionCancellationEmail = async (websiteName, userEmail, reason, feedback) => {
+    try {
+        const mailOptions = {
+            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
+            to: process.env.ADMIN_EMAIL, // Admin email from environment variables
+            subject: `Subscription Cancellation Alert: ${websiteName} by ${userEmail}`,
+            html: `
+<table style="font-family: 'Inter', Helvetica, Arial, sans-serif; width: 100%; max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); overflow: hidden;">
+    <tr>
+        <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #EF4444, #DC2626); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
+                ${chatBotHubLogoSvg}
+            </div>
+            <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Subscription Cancellation Notification</h1>
+            <p style="font-size: 18px; color: #475569; line-height: 1.6;">A subscription for <strong>${websiteName}</strong> has been cancelled.</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 32px; text-align: left;">
+            <p style="font-size: 18px; color: #475569; margin-bottom: 16px; line-height: 1.6;"><strong>User Email:</strong> ${userEmail}</p>
+            <p style="font-size: 18px; color: #475569; margin-bottom: 16px; line-height: 1.6;"><strong>Website Name:</strong> ${websiteName}</p>
+            <p style="font-size: 18px; color: #475569; margin-bottom: 16px; line-height: 1.6;"><strong>Reason for Cancellation:</strong></p>
+            <p style="font-size: 16px; color: #475569; margin-bottom: 24px; line-height: 1.6; padding: 12px; border: 1px solid #E2E8F0; border-radius: 8px; background-color: #F8FAFC;">${reason || 'No reason provided.'}</p>
+            <p style="font-size: 18px; color: #475569; margin-bottom: 16px; line-height: 1.6;"><strong>User Feedback:</strong></p>
+            <p style="font-size: 16px; color: #475569; line-height: 1.6; padding: 12px; border: 1px solid #E2E8F0; border-radius: 8px; background-color: #F8FAFC;">${feedback || 'No feedback provided.'}</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 24px; text-align: center; border-top: 1px solid #E2E8F0; background-color: #F8FAFC;">
+            <p style="font-size: 15px; color: #475569; margin-bottom: 8px;">Regards,</p>
+            <p style="font-size: 16px; font-weight: bold; color: #0F172A;">ChatBot Hub System</p>
+        </td>
+    </tr>
+</table>
+            `,
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Admin cancellation email sent for ${websiteName} by ${userEmail}`);
+    } catch (error) {
+        console.error(`Error sending admin cancellation email for ${websiteName} by ${userEmail}:`, error);
+    }
+};
+
+export const userSubscriptionCancellationEmail = async (toEmail, websiteName) => {
+    try {
+        const mailOptions = {
+            from: `"ChatBot Hub" <${process.env.BREVO_SMTP_USER}>`,
+            to: toEmail,
+            subject: `Sad to See You Go - Your ChatBot Hub Subscription for ${websiteName} Has Been Cancelled`,
+            html: `
+<table style="font-family: 'Inter', Helvetica, Arial, sans-serif; width: 100%; max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); overflow: hidden;">
+    <tr>
+        <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #F0F9FF, #F8FAFC); border-bottom: 1px solid #E2E8F0;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; background: linear-gradient(135deg, #EF4444, #DC2626); border-radius: 20px; margin-bottom: 24px; box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);">
+                ${chatBotHubLogoSvg}
+            </div>
+            <h1 style="font-size: 32px; font-weight: bold; color: #0F172A; margin-bottom: 16px; line-height: 1.2;">Your ChatBot Hub Subscription Has Been Cancelled</h1>
+            <p style="font-size: 18px; color: #475569; line-height: 1.6;">We're sorry to see you go! Your subscription for <strong>${websiteName}</strong> has been successfully cancelled.</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 32px; text-align: center;">
+            <p style="font-size: 18px; color: #475569; margin-bottom: 24px; line-height: 1.6;">We truly appreciate every minute you spent with ChatBot Hub and are grateful for your support.</p>
+            <p style="font-size: 18px; color: #475569; margin-bottom: 32px; line-height: 1.6;">Should your needs change, or if you decide to return, we'll be here, ready to provide even more value and help you achieve your goals. Your account and data will be safely stored, making it easy to pick up where you left off.</p>
+            <p style="font-size: 15px; color: #475569; margin-top: 32px; line-height: 1.6;">If you have any feedback or questions, please don't hesitate to reach out to our support team. We're always striving to improve!</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 24px; text-align: center; border-top: 1px solid #E2E8F0; background-color: #F8FAFC;">
+            <p style="font-size: 15px; color: #475569; margin-bottom: 8px;">Warmly,</p>
+            <p style="font-size: 16px; font-weight: bold; color: #0F172A;">The ChatBot Hub Team</p>
+        </td>
+    </tr>
+</table>
+            `,
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`User cancellation email sent to: ${toEmail}`);
+    } catch (error) {
+        console.error(`Error sending user cancellation email to ${toEmail}:`, error);
     }
 };

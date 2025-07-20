@@ -18,11 +18,15 @@ const userSchema = new mongoose.Schema({
     transactions: [{ type: String }],
     stripeCusId: { type: String },
     // New fields for password reset
+    shopifyStores: [
+        {
+          shop: { type: String },
+          accessToken: { type: String },
+          connectedAt: { type: Date, default: Date.now }
+        }
+    ],
     resetPasswordToken: String,
     resetPasswordExpires: Date,
-    // NEW: Shopify User-Level Authentication Fields
-    shopifyUserId: { type: String, unique: true, sparse: true, default: null }, // Shopify's unique ID for the user/merchant
-    shopifyUserAccessToken: { type: String, default: null }, // User-level access token
 }, { timestamps: true });
 
 // Pre-save hook to hash password before saving
