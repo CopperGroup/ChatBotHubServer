@@ -193,7 +193,7 @@
                     throw new Error(`HTTP error! status: ${translationResponse.status}`);
                 }
                 t = await translationResponse.json();
-                console.log(`Chatbot: Loaded translations for: ${languageToFetch}`);
+                // console.log(`Chatbot: Loaded translations for: ${languageToFetch}`);
 
             } catch (error) {
                 console.error("Chatbot: Error fetching dynamic language translations:", error);
@@ -1455,9 +1455,11 @@
                 showView('chat', 'right');
                 // When starting a new chat, the input should always be visible
                 updateInputAreaVisibility(true);
+                const countryRes = await fetch('https://ipwho.is/')
 
+                const data = await countryRes.json()
                 // console.log("Widget: Emitting 'create_new_chat'.");
-                socket.emit("create_new_chat", { chatbotCode, email: userEmail });
+                socket.emit("create_new_chat", { chatbotCode, email: userEmail, country: { country: data.country, countryCode: data.country_code, flag: data.flag.img }});
             } catch (error) {
                 // console.error('Error creating new chat:', error);
                 hideTypingIndicator();

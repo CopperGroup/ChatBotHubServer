@@ -8,6 +8,15 @@ const chatSchema = new mongoose.Schema({
     aiResponsesEnabled: { type: Boolean, default: true },
     leadingStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', default: null },
     currentWorkflowBlockId: { type: String },
+    country: { 
+        type: Object,
+        default: {
+            country: null,
+            countryCode: null,
+            flag: null,
+        }
+    },
+    avatar: { type: String },
     // NEW FIELD: Reference to the parent Website
     website: { type: mongoose.Schema.Types.ObjectId, ref: 'Website', required: true } // Added this line
 }, { timestamps: true });

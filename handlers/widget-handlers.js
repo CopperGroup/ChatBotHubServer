@@ -5,6 +5,8 @@ import { PlanValidator } from "../services/plan-validator.js";
 import multiLanguage from "../services/multiLanguage.js";
 import { getInitialWorkflowMessage, processWorkflowBlock, advanceWorkflow, getBlockById, getNextBlocks } from "../services/workflow-service.js";
 import { sendTelegramNotification } from "../services/telegram-notifier.js";
+import chat from "../models/chat.js";
+import crypto from "crypto"
 
 const AI_URL = process.env.AI_URL;
 const TOKEN_SERVICE_BASE_URL = process.env.TOKEN_SERVICE_BASE_URL;
@@ -17,7 +19,7 @@ const getTodayDateString = () => {
     return `${year}-${month}-${day}`;
 };
 
-export async function handleCreateNewChat(socket, io, website, { email }) {
+export async function handleCreateNewChat(socket, io, website, { email, country }) {
     let newChat;
     console.log(`SERVER EVENT: Received 'create_new_chat' from Widget (Socket ID: ${socket.id}). Email: ${email}.`);
 
@@ -31,7 +33,8 @@ export async function handleCreateNewChat(socket, io, website, { email }) {
             name: email.split("@")[0],
             status: "open",
             aiResponsesEnabled: aiValidation.planAllowsAI && aiValidation.isValid,
-            currentWorkflowBlockId: "start"
+            currentWorkflowBlockId: "start",
+            country: country
         });
         await newChat.save();
         console.log(`SERVER DEBUG: New chat ${newChat._id} created in DB. AI enabled: ${newChat.aiResponsesEnabled}. Initial workflow block ID set to 'start'.`);
@@ -110,11 +113,22 @@ export async function handleCreateNewChat(socket, io, website, { email }) {
         messages.push(initialBotMessage);
 
         newChat.currentWorkflowBlockId = nextWorkflowPositionAfterStart;
+ 
+        let gravatarUrl = ""
+        // if(messages.length === 1) {
+        //     console.log("Getting avatar");
+        //     const hash = crypto.createHash('sha256').update(newChat.email.trim().toLowerCase()).digest('hex')
+        //     gravatarUrl = `https://www.gravatar.com/avatar/${hash}?d=identicon`
+        //     console.log(gravatarUrl)
+        // }
+
         await Chat.findByIdAndUpdate(newChat._id, {
             messages: JSON.stringify(messages),
             currentWorkflowBlockId: newChat.currentWorkflowBlockId,
-            status: newChat.status
+            status: newChat.status,
+            // avatar: gravatarUrl,
         });
+
         console.log(`SERVER DEBUG: Initial bot message and workflow state saved to DB for chat ${newChat._id}. Current workflow block ID: ${newChat.currentWorkflowBlockId}. Chat status: ${newChat.status}.`);
 
         socket.emit("reply", { text: initialBotMessageText, sender: "bot", timestamp: initialBotMessage.timestamp, options: initialBotMessageOptions });
