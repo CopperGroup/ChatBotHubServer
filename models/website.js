@@ -23,7 +23,8 @@ const websiteSchema = new mongoose.Schema({
             dynamiclyAdaptToLanguage: false,
             allowedPaths: [],
             disallowedPaths: [],
-            dailyTokenLimit: null
+            dailyTokenLimit: null,
+            scrapePaths: []
         },
     },
     creditCount: { type: Number, default: 100 },
@@ -36,6 +37,7 @@ const websiteSchema = new mongoose.Schema({
     stripeSubscriptionId: { type: String, default: null },
     billedSuccessfuly: { type: Boolean, default: false },
     exlusiveCustomer: { type: Boolean, default: false },
+    aiSummary: { type: String, default: ""},
     // NEW: Field to store Shopify access token
     shopifyAccessToken: { type: String, default: null },
 }, { timestamps: true });

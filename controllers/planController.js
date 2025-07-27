@@ -93,6 +93,20 @@ export const getPlanById = async (req, res) => {
   }
 };
 
+export const getFreePlanId = async (req, res) => {
+  try {
+    const plan = await Plan.findOne({ name: "Free"});
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found." });
+    }
+    res.json(plan);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+
 // UPDATE
 export const updatePlan = async (req, res) => {
   const {

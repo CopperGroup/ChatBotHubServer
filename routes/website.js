@@ -17,6 +17,9 @@ import {
   freeTrialEnded,
   paymentWarning,
   addCredits,
+  // NEW: Import the new functions
+  getAiSummary,
+  updateAiSummary,
 } from "../controllers/websiteController.js";
 
 const router = express.Router();
@@ -28,6 +31,12 @@ router.get("/:id", getWebsiteById);
 router.get("/by-link/search", getWebsiteByLink);
 router.put("/:id", updateWebsite);
 router.delete("/:id", deleteWebsite);
+
+// NEW: Unprotected endpoints for AI Summary
+// GET /websites/:websiteId/summary - To retrieve the AI summary
+router.get("/:websiteId/summary", getAiSummary);
+// PUT /websites/:websiteId/summary - To update the AI summary
+router.put("/:websiteId/summary", updateAiSummary);
 
 // Requires Auth
 router.put("/:id/change-plan", authMiddleware, changeWebsitePlan);
@@ -45,4 +54,4 @@ router.put("/:id/free-trial-ended", paymentServiceAuth, freeTrialEnded);
 router.post("/:id/payment-warning", paymentServiceAuth, paymentWarning);
 router.put("/:id/add-credits", paymentServiceAuth, addCredits);
 
-export default router;
+export const websiteRoutes = router;

@@ -2,7 +2,6 @@ import Website from "../models/website.js";
 import User from "../models/user.js";
 import Plan from "../models/plan.js";
 import { addAllowedOrigin } from "../services/allowedOrigins.js";
-import { firstSubscriptionEmail } from "../services/email.js";
 import Staff from "../models/staff.js";
 import Chat from "../models/chat.js";
 import {
@@ -17,15 +16,13 @@ import {
   billingWarningEmail,
   freeTrialEndWarningEmail,
   tokenPurchaseSuccessEmail,
-} from "../utils/emailService.js"; // Якщо ці методи тут
-import { getFreePlanId } from "../services/plan-utils.js";
-import { sendPlanStateToPlanController } from "../services/plan-state.js";
-
-import {
   subscriptionSuccessEmail,
   subscriptionFailedEmail,
+  firstSubscriptionEmail,
   adminSubscriptionCancellationEmail,
-} from "../services/emailService.js";
+} from "../services/email.js"; // Якщо ці методи тут
+import { getFreePlanId } from "./planController.js";
+// import { sendPlanStateToPlanController } from "../services/plan-state.js"; // This import is duplicated below, keeping the one from the shared variables fetcher context
 
 // --- Configuration and Defaults ---
 let PLAN_CONTROLLER_SERVICE_URL = "http://localhost:3002";
@@ -867,6 +864,50 @@ export const addCredits = async (req, res) => {
     });
   } catch (err) {
     console.error("Error adding credits:", err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+// NEW: Controller function to get AI summary for a website
+export const getAiSummary = async (req, res) => {
+  const websiteId = req.params.websiteId; // Using websiteId from URL parameter
+
+  try {
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    // Return the aiSummary field
+    res.status(200).json({ websiteId: website._id, aiSummary: website.aiSummary });
+  } catch (err) {
+    console.error(`Error fetching AI summary for website ${websiteId}:`, err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+// NEW: Controller function to update AI summary for a website
+export const updateAiSummary = async (req, res) => {
+  const websiteId = req.params.websiteId; // Using websiteId from URL parameter
+  const { newSummary } = req.body; // Expecting the new summary in the request body
+
+  try {
+    if (typeof newSummary !== 'string') {
+      return res.status(400).json({ message: "newSummary field is required and must be a string." });
+    }
+
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    // Update the aiSummary field
+    website.aiSummary = newSummary;
+    await website.save();
+
+    res.status(200).json({ message: "AI summary updated successfully.", websiteId: website._id, newAiSummary: website.aiSummary });
+  } catch (err) {
+    console.error(`Error updating AI summary for website ${websiteId}:`, err.message);
     res.status(500).send("Server Error");
   }
 };
