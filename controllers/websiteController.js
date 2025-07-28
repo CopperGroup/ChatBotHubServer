@@ -26,8 +26,8 @@ import { getFreePlanId } from "./planController.js";
 
 // --- Configuration and Defaults ---
 let PLAN_CONTROLLER_SERVICE_URL = "http://localhost:3002";
-let FREE_TRIAL_DURATION_DAYS = 14;
-
+let FREE_TRIAL_DURATION_DAYS = 3;
+let PRICE_FOR_SCRAPING = 10;
 // Shared variables fetcher
 async function fetchSharedVariables() {
   const url =
@@ -254,6 +254,7 @@ export const updateWebsite = async (req, res) => {
     language,
     userId,
     predefinedAnswers,
+    aiSummary,
   } = req.body;
   const websiteId = req.params.id;
 
@@ -276,6 +277,7 @@ export const updateWebsite = async (req, res) => {
     website.description = description || website.description;
     website.language = language || website.language;
     website.predefinedAnswers = predefinedAnswers || website.predefinedAnswers;
+    website.aiSummary = aiSummary || website.aiSummary
 
     if (preferences) {
       website.preferences = { ...website.preferences, ...preferences };
@@ -903,6 +905,7 @@ export const updateAiSummary = async (req, res) => {
 
     // Update the aiSummary field
     website.aiSummary = newSummary;
+    website.creditCount = website.creditCount - PRICE_FOR_SCRAPING
     await website.save();
 
     res.status(200).json({ message: "AI summary updated successfully.", websiteId: website._id, newAiSummary: website.aiSummary });
