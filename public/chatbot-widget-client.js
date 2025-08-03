@@ -672,6 +672,7 @@
                         backdrop-filter: blur(10px);
                         font-weight: 400;
                     " />
+                    
                     <button id="sendBtn" style="
                         padding: 14px 20px;
                         background: linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%);
@@ -692,6 +693,27 @@
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
                     </button>
+                     <input id="fileInput" type="file" style="
+                        padding: 14px 20px;
+                        background: linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 12px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 4px 16px ${gradientColor1}30;
+                        display: flex; /* Added to center the SVG */
+                        align-items: center; /* Added to center the SVG */
+                        justify-content: center; /* Added to center the SVG */
+                    ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+              
+                    </input>
                 </div>
                 <div id="input-status-message" style="
                     text-align: center;
@@ -1110,6 +1132,7 @@
     const backBtn = document.getElementById("back-to-chats");
     const msgInput = document.getElementById("msg");
     const sendBtn = document.getElementById("sendBtn");
+    const fileInput = document.getElementById("fileInput");
     const newChatBtn = document.getElementById("newChatBtn");
     const emailInput = document.getElementById("emailInput");
     const emailSubmitBtn = document.getElementById("emailSubmitBtn");
@@ -1130,7 +1153,7 @@
         });
       });
 
-      [emailSubmitBtn, sendBtn].forEach((btn) => {
+      [emailSubmitBtn, sendBtn, fileInput].forEach((btn) => {
         btn.addEventListener("mouseenter", () => {
           btn.style.transform = "translateY(-2px)";
           btn.style.boxShadow = `0 8px 24px ${gradientColor1}40`;
@@ -1596,13 +1619,18 @@
     // Message sending
     sendBtn.addEventListener("click", async () => {
       const msg = msgInput.value.trim();
-      if (!msg || !currentChatId) {
-        // console.warn("Widget: Cannot send message. Message empty or no currentChatId.");
+      const files = fileInput.files;
+
+      if (!msg && files.length === 0) {
+        // console.warn("Widget: Cannot send message. Message and files are empty.");
+        return;
+      }
+      if (!currentChatId) {
+        // console.warn("Widget: Cannot send message. No currentChatId.");
         return;
       }
 
       // --- NEW LOGIC TO DISABLE PREVIOUS OPTIONS ---
-      // When a user sends a message, any existing options from previous bot messages should be disabled.
       const allMessageBubbles =
         messagesContainer.querySelectorAll(".message-bubble");
       allMessageBubbles.forEach((bubble) => {
@@ -1611,7 +1639,6 @@
           button.disabled = true;
           button.style.opacity = "0.6";
           button.style.cursor = "default";
-          // Optionally, remove hover effects if they were added
           button.onmouseenter = null;
           button.onmouseleave = null;
         });
@@ -1619,27 +1646,88 @@
       // --- END NEW LOGIC ---
 
       hideTypingIndicator();
-      renderMessage("user", msg, new Date().toISOString());
+
+      let uploadedFileUrl = [];
+      if (files.length > 0) {
+        // console.log("Widget: Files detected. Starting upload process.");
+        try {
+          const formData = new FormData();
+          for (let i = 0; i < files.length; i++) {
+            formData.append("media", files[i]); // 'files' should match your server's expected field name
+            formData.append("chatId", currentChatId);
+          }
+
+          const uploadResponse = await fetch(`${backendUrl}/api/files`, {
+            // Use your backendUrl
+            method: "POST",
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.message || "File upload failed.");
+          }
+
+          const uploadResult = await uploadResponse.json();
+          uploadedFileUrl = uploadResult.data.url || []; // Assuming your server returns { fileUrls: [...] }
+          // console.log("Widget: Files uploaded successfully. URLs:", uploadedFileUrl);
+
+          console.log("uploadedFileUrl", uploadedFileUrl);
+
+          // Optionally, render a message indicating file upload success
+        } catch (error) {
+          console.error("Widget: Error uploading files:", error);
+          renderMessage(
+            "bot",
+            `Error uploading file(s): ${error.message}`,
+            new Date().toISOString()
+          );
+          // Do not send the text message if file upload fails critically
+          return;
+        }
+      }
+
+      // Combine message text and file URLs for sending via socket
+      let messageToSend = msg;
+      if (uploadedFileUrl.length > 0) {
+        const fileLinks = uploadedFileUrl
+          .map((url) => `[${url.split("/").pop()}](${url})`)
+          .join(", ");
+        messageToSend = messageToSend
+          ? `${messageToSend}\n\nUploaded Files: ${fileLinks}`
+          : `Uploaded Files: ${fileLinks}`;
+      }
+
+      renderMessage("user", messageToSend, new Date().toISOString());
       msgInput.value = "";
+      fileInput.value = ""; // Clear the file input after sending
+
       // console.log("Widget: Emitting 'message' to server. ChatId:", currentChatId);
 
-      // точка
       socket.emit("message", {
         chatbotCode,
         chatId: currentChatId,
         email: userEmail,
-        message: msg,
+        message: messageToSend, // Send the combined message
         currentWebsiteURL,
+        fileUrl: uploadedFileUrl, // Include file URLs in the socket message
       });
 
-      // NEW: After user sends a regular message, explicitly show the input field
       updateInputAreaVisibility(true);
-      // console.log("Widget: Regular message sent by user. Showing input field.");
+      // console.log("Widget: Message sent by user. Showing input field.");
     });
 
     msgInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {
         sendBtn.click();
+      }
+    });
+
+    // Event listener for file input change (optional, for immediate feedback)
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        // console.log(`Widget: ${fileInput.files.length} file(s) selected.`);
+        // You could display selected file names here if desired
       }
     });
 
