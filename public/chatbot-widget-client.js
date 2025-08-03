@@ -687,6 +687,7 @@
                         backdrop-filter: blur(10px);
                         font-weight: 400;
                     " />
+                    
                     <button id="sendBtn" style="
                         padding: 14px 20px;
                         background: linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%);
@@ -707,6 +708,27 @@
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
                     </button>
+                     <input id="fileInput" type="file" style="
+                        padding: 14px 20px;
+                        background: linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 12px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 4px 16px ${gradientColor1}30;
+                        display: flex; /* Added to center the SVG */
+                        align-items: center; /* Added to center the SVG */
+                        justify-content: center; /* Added to center the SVG */
+                    ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+              
+                    </input>
                 </div>
                 <div id="input-status-message" style="
                     text-align: center;
@@ -1050,121 +1072,318 @@
                 isInputVisible = false;
                 // console.log("Widget: updateInputAreaVisibility: Hiding input field, showing status message.");
             }
-            // Ensure the main input area container is visible (opacity handled by showView)
-            inputArea.style.display = 'block';
-            inputArea.style.opacity = '1';
-        };
-        
-        // --- Widget Assembly and Initialization ---
-        // Create all components
-        const header = createHeader();
-        const chatContent = createContentContainer();
-        const emailInputArea = createEmailInputArea();
-        const chatListDiv = createConversationsList();
-        const messagesContainer = createMessagesContainer();
-        const typingIndicatorBubble = createTypingIndicator();
-        const inputArea = createInputArea(); // Input area element is created here
-        const newChatBtnContainer = createNewChatButton();
-        const homeContainer = createHome()
-        // Assemble the widget
-        chatContent.appendChild(emailInputArea);
-        chatContent.appendChild(chatListDiv);
-        chatContent.appendChild(messagesContainer);
-        chatWindow.appendChild(header);
-        chatWindow.appendChild(chatContent);
-        chatWindow.appendChild(inputArea);
-        chatButton.appendChild(homeContainer)
-        chatWindow.appendChild(newChatBtnContainer);
-        widget.appendChild(chatButton);
-        widget.appendChild(chatWindow);
-        document.body.appendChild(widget);
-        
-        // Get elements (re-get after appending to DOM for robustness)
-        const closeBtn = document.getElementById('close-chat');
-        const backBtn = document.getElementById('back-to-chats');
-        const msgInput = document.getElementById("msg");
-        const sendBtn = document.getElementById("sendBtn");
-        const newChatBtn = document.getElementById("newChatBtn");
-        const emailInput = document.getElementById("emailInput");
-        const emailSubmitBtn = document.getElementById("emailSubmitBtn");
-        
-        // --- Event Handlers and Interactions ---
-        // Enhanced input focus effects
-        const addInputEffects = () => {
-            [emailInput, msgInput].forEach(input => {
-                input.addEventListener('focus', () => {
-                    input.style.borderColor = gradientColor1;
-                    input.style.boxShadow = `0 0 0 3px ${gradientColor1}20`;
-                    input.style.transform = 'translateY(-1px)';
-                });
-                input.addEventListener('blur', () => {
-                    input.style.borderColor = '#e5e7eb';
-                    input.style.boxShadow = 'none';
-                    input.style.transform = 'translateY(0)';
-                });
-            });
-            
-            [emailSubmitBtn, sendBtn].forEach(btn => {
-                btn.addEventListener('mouseenter', () => {
-                    btn.style.transform = 'translateY(-2px)';
-                    btn.style.boxShadow = `0 8px 24px ${gradientColor1}40`;
-                });
-                btn.addEventListener('mouseleave', () => {
-                    btn.style.transform = 'translateY(0)';
-                    btn.style.boxShadow = `0 4px 16px ${gradientColor1}30`;
-                });
-            });
-            
-            newChatBtn.addEventListener('mouseenter', () => {
-                newChatBtn.style.background = 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)';
-                newChatBtn.style.transform = 'translateY(-1px)';
-                newChatBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-            });
-            newChatBtn.addEventListener('mouseleave', () => {
-                newChatBtn.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
-                newChatBtn.style.transform = 'translateY(0)';
-                newChatBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
-            });
-        };
-        
-        addInputEffects();
-        
-        // Widget toggle with enhanced smooth closing animation
-        const toggleWidget = () => {
-            if (isExpanded) {
-                // Add smooth closing animation
-                chatWindow.classList.remove('slide-down');
-                chatWindow.classList.add('smooth-slide-down');
-                
-                // Hide the window after animation completes
-                setTimeout(() => {
-                    chatWindow.style.display = 'none';
-                    chatWindow.classList.remove('smooth-slide-down');
-                    
-                    // Show button with fade-in animation
-                    chatButton.style.display = 'flex';
-                    chatButton.classList.add('button-fade-in');
-                    
-                    // Remove the fade-in class after animation
-                    setTimeout(() => {
-                        chatButton.classList.remove('button-fade-in');
-                    }, 500);
-                    
-                    isExpanded = false;
-                }, 500);
-            } else {
-                chatButton.style.display = 'none';
-                chatWindow.style.display = 'flex';
-                chatWindow.classList.remove('slide-down', 'smooth-slide-down');
-                isExpanded = true;
-                
-                // Initialize view based on user state
-                if (!userEmail) {
-                    showView('email');
-                } else {
-                    showView('conversations');
-                    loadUserChats(userEmail); // Will call loadUserChats after view transition
-                }
+
+          }, 100);
+        }
+
+        updateHeaderForView(viewName);
+        currentView = viewName;
+      }, 200);
+    };
+
+    // NEW FUNCTION: Manages the visibility of the input field vs. the status message
+    const updateInputAreaVisibility = (showInput) => {
+      const inputFieldContainer = document.getElementById(
+        "input-field-container"
+      );
+      const inputStatusMessage = document.getElementById(
+        "input-status-message"
+      );
+      const inputArea = document.getElementById("chatbot-input-area");
+
+      if (!inputFieldContainer || !inputStatusMessage || !inputArea) return;
+
+      if (showInput) {
+        inputFieldContainer.style.display = "flex";
+        inputStatusMessage.style.display = "none";
+        isInputVisible = true;
+        // console.log("Widget: updateInputAreaVisibility: Showing input field, hiding status message.");
+      } else {
+        inputFieldContainer.style.display = "none";
+        inputStatusMessage.style.display = "block";
+        isInputVisible = false;
+        // console.log("Widget: updateInputAreaVisibility: Hiding input field, showing status message.");
+      }
+      // Ensure the main input area container is visible (opacity handled by showView)
+      inputArea.style.display = "block";
+      inputArea.style.opacity = "1";
+    };
+
+    // --- Widget Assembly and Initialization ---
+    // Create all components
+    const header = createHeader();
+    const chatContent = createContentContainer();
+    const emailInputArea = createEmailInputArea();
+    const chatListDiv = createConversationsList();
+    const messagesContainer = createMessagesContainer();
+    const typingIndicatorBubble = createTypingIndicator();
+    const inputArea = createInputArea(); // Input area element is created here
+    const newChatBtnContainer = createNewChatButton();
+
+    // Assemble the widget
+    chatContent.appendChild(emailInputArea);
+    chatContent.appendChild(chatListDiv);
+    chatContent.appendChild(messagesContainer);
+    chatWindow.appendChild(header);
+    chatWindow.appendChild(chatContent);
+    chatWindow.appendChild(inputArea);
+    chatWindow.appendChild(newChatBtnContainer);
+    widget.appendChild(chatButton);
+    widget.appendChild(chatWindow);
+    document.body.appendChild(widget);
+
+    // Get elements (re-get after appending to DOM for robustness)
+    const closeBtn = document.getElementById("close-chat");
+    const backBtn = document.getElementById("back-to-chats");
+    const msgInput = document.getElementById("msg");
+    const sendBtn = document.getElementById("sendBtn");
+    const fileInput = document.getElementById("fileInput");
+    const newChatBtn = document.getElementById("newChatBtn");
+    const emailInput = document.getElementById("emailInput");
+    const emailSubmitBtn = document.getElementById("emailSubmitBtn");
+
+    // --- Event Handlers and Interactions ---
+    // Enhanced input focus effects
+    const addInputEffects = () => {
+      [emailInput, msgInput].forEach((input) => {
+        input.addEventListener("focus", () => {
+          input.style.borderColor = gradientColor1;
+          input.style.boxShadow = `0 0 0 3px ${gradientColor1}20`;
+          input.style.transform = "translateY(-1px)";
+        });
+        input.addEventListener("blur", () => {
+          input.style.borderColor = "#e5e7eb";
+          input.style.boxShadow = "none";
+          input.style.transform = "translateY(0)";
+        });
+      });
+
+      [emailSubmitBtn, sendBtn, fileInput].forEach((btn) => {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.transform = "translateY(-2px)";
+          btn.style.boxShadow = `0 8px 24px ${gradientColor1}40`;
+        });
+        btn.addEventListener("mouseleave", () => {
+          btn.style.transform = "translateY(0)";
+          btn.style.boxShadow = `0 4px 16px ${gradientColor1}30`;
+        });
+      });
+
+      newChatBtn.addEventListener("mouseenter", () => {
+        newChatBtn.style.background =
+          "linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)";
+        newChatBtn.style.transform = "translateY(-1px)";
+        newChatBtn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
+      });
+      newChatBtn.addEventListener("mouseleave", () => {
+        newChatBtn.style.background =
+          "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)";
+        newChatBtn.style.transform = "translateY(0)";
+        newChatBtn.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.04)";
+      });
+    };
+
+    addInputEffects();
+
+    // Widget toggle with enhanced smooth closing animation
+    const toggleWidget = () => {
+      if (isExpanded) {
+        // Add smooth closing animation
+        chatWindow.classList.remove("slide-down");
+        chatWindow.classList.add("smooth-slide-down");
+
+        // Hide the window after animation completes
+        setTimeout(() => {
+          chatWindow.style.display = "none";
+          chatWindow.classList.remove("smooth-slide-down");
+
+          // Show button with fade-in animation
+          chatButton.style.display = "flex";
+          chatButton.classList.add("button-fade-in");
+
+          // Remove the fade-in class after animation
+          setTimeout(() => {
+            chatButton.classList.remove("button-fade-in");
+          }, 500);
+
+          isExpanded = false;
+        }, 500);
+      } else {
+        chatButton.style.display = "none";
+        chatWindow.style.display = "flex";
+        chatWindow.classList.remove("slide-down", "smooth-slide-down");
+        isExpanded = true;
+
+        // Initialize view based on user state
+        if (!userEmail) {
+          showView("email");
+        } else {
+          showView("conversations");
+          loadUserChats(userEmail); // Will call loadUserChats after view transition
+        }
+      }
+    };
+
+    chatButton.addEventListener("click", toggleWidget);
+    closeBtn.addEventListener("click", toggleWidget);
+
+    // --- Core Functionality - Socket and Message Handling ---
+    // console.log("chatbotCode:", chatbotCode);
+    // console.log("currentWebsiteURL:", currentWebsiteURL);
+
+    const socket = io(socketIoUrl, {
+      // Use the injected socketIoUrl
+      path: "/socket.io",
+      query: { chatbotCode, currentWebsiteURL },
+      transports: ["websocket", "polling"],
+    });
+
+    // console.log(socket)
+    // Message rendering function
+    const renderMessage = (
+      sender,
+      text,
+      timestamp,
+      options = [],
+      isReplySent = false
+    ) => {
+      const messageBubble = createMessageBubble(
+        sender,
+        text,
+        timestamp,
+        options,
+        isReplySent
+      );
+      messagesContainer.appendChild(messageBubble);
+      // This setTimeout ensures the DOM has updated before trying to scroll
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 50);
+
+      // The logic for updating input visibility is now primarily handled by the 'reply' or 'chat_update' events
+      // and the optionButton click listener, not directly here, unless it's a user message.
+      if (sender === "user") {
+        // When a user sends a message, assume input should be visible for the next turn,
+        // unless the preceding bot message had options that are now considered 'replied to'.
+        // The actual visibility update will happen when the bot replies.
+        // console.log("Widget: renderMessage: User message. Input state will be determined by next bot reply.");
+      } else {
+        // Bot/AI/staff message
+        // If a bot sends a message with options, and it's the latest message, hide the input field.
+        // If it sends a message without options, show the input field.
+        if (options && options.length > 0 && !isReplySent) {
+          updateInputAreaVisibility(false); // Hide input, show "choose option" message
+          // console.log("Widget: renderMessage: Bot message with options. Hiding input.");
+        } else {
+          updateInputAreaVisibility(true); // Show input
+          // console.log("Widget: renderMessage: Bot message without options or options replied to. Showing input.");
+        }
+      }
+    };
+
+    // Typing indicator functions
+    const showTypingIndicator = () => {
+      if (isTyping) return;
+      if (messagesContainer.lastChild !== typingIndicatorBubble) {
+        messagesContainer.appendChild(typingIndicatorBubble);
+      }
+      typingIndicatorBubble.style.display = "flex";
+      isTyping = true;
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 50);
+    };
+
+    const hideTypingIndicator = () => {
+      typingIndicatorBubble.style.display = "none";
+      isTyping = false;
+    };
+
+    // View navigation functions
+    const showChatList = () => {
+      localStorage.removeItem("currentChatId");
+      currentChatId = null;
+
+      // console.log("Widget: Navigating to chat list. currentChatId cleared.");
+      hideTypingIndicator();
+      messagesContainer.innerHTML = "";
+
+      // When going back to chat list, reset input visibility to default (visible)
+      updateInputAreaVisibility(true);
+
+      if (!userEmail) {
+        showView("email");
+      } else {
+        showView("conversations");
+        loadUserChats(userEmail); // Will call loadUserChats after view transition
+        showView("conversations", "left");
+      }
+    };
+
+    // CRITICAL CHANGE: Load messages FIRST, then show view
+    const showChatMessages = async (chatId) => {
+      // console.log("Widget: showChatMessages called for chat:", chatId);
+      currentChatId = chatId;
+      localStorage.setItem("currentChatId", currentChatId);
+
+      socket.emit("join_chat", { chatId: chatId });
+
+      await loadMessages(chatId);
+
+      showView("chat", "right");
+      // console.log("Widget: Messages loaded. Navigating to chat view.");
+
+      // Adjust this timeout to be AFTER the showView transition finishes + a small buffer
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // console.log("Widget: Scrolled to bottom after chat view transition.");
+      }, 450); // Keep this to ensure scroll
+    };
+
+    // --- Data Loading Functions ---
+    const loadMessages = async (chatId) => {
+      // console.log("Widget: Attempting to load messages for chat:", chatId);
+      const loadingChatId = chatId;
+
+      try {
+        if (!loadingChatId) {
+          messagesContainer.innerHTML = "";
+          currentChatId = null;
+          localStorage.removeItem("currentChatId");
+          // console.log("Widget: ChatId is null, cleared messages and currentChatId.");
+          return;
+        }
+
+        const response = await fetch(
+          `${backendUrl}/api/chats/${loadingChatId}`
+        );
+        const chat = await response.json();
+        // console.log("Widget: Fetched chat data:", chat);
+
+        if (currentChatId !== loadingChatId) {
+          // console.warn("Widget: Aborting message load for old chat ID as currentChatId changed.");
+          return;
+        }
+
+        messagesContainer.innerHTML = "";
+
+        const loadedMessages = chat.messages ? JSON.parse(chat.messages) : [];
+        // console.log("Widget: Parsed loaded messages:", loadedMessages);
+
+        let lastBotMessageWithOptionsPresent = false;
+        let userRepliedAfterLastOptions = false;
+
+        loadedMessages.forEach((msg, index) => {
+          let isReplySentForThisOptionsBlock = false;
+          if (msg.options && msg.options.length > 0) {
+            lastBotMessageWithOptionsPresent = true; // Flag that we encountered options
+            userRepliedAfterLastOptions = false; // Reset for this options block
+            for (let i = index + 1; i < loadedMessages.length; i++) {
+              if (loadedMessages[i].sender === "user") {
+                userRepliedAfterLastOptions = true;
+                break;
+              }
+
             }
         };
         
@@ -1477,38 +1696,216 @@
                 }, 2000);
             }
         });
-        
-        emailInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                emailSubmitBtn.click();
-            }
-        });
-        
-        // New chat creation
-        newChatBtn.addEventListener('click', async () => {
-            try {
-                messagesContainer.innerHTML = '';
-                showView('chat', 'right');
-                // When starting a new chat, the input should always be visible
-                updateInputAreaVisibility(true);
-                const countryRes = await fetch('https://ipwho.is/')
+      } catch (error) {
+        // console.error('Error creating new chat:', error);
+        hideTypingIndicator();
+        renderMessage(
+          "bot",
+          t["Error starting a new chat."],
+          new Date().toISOString()
+        );
+      }
+    });
 
-                const data = await countryRes.json()
-                // console.log("Widget: Emitting 'create_new_chat'.");
-                socket.emit("create_new_chat", { chatbotCode, email: userEmail, country: { country: data.country, countryCode: data.country_code, flag: data.flag.img }});
-            } catch (error) {
-                // console.error('Error creating new chat:', error);
-                hideTypingIndicator();
-                renderMessage('bot', t['Error starting a new chat.'], new Date().toISOString());
-            }
+    // Message sending
+    sendBtn.addEventListener("click", async () => {
+      const msg = msgInput.value.trim();
+      const files = fileInput.files;
+
+      if (!msg && files.length === 0) {
+        // console.warn("Widget: Cannot send message. Message and files are empty.");
+        return;
+      }
+      if (!currentChatId) {
+        // console.warn("Widget: Cannot send message. No currentChatId.");
+        return;
+      }
+
+      // --- NEW LOGIC TO DISABLE PREVIOUS OPTIONS ---
+      const allMessageBubbles =
+        messagesContainer.querySelectorAll(".message-bubble");
+      allMessageBubbles.forEach((bubble) => {
+        const optionButtons = bubble.querySelectorAll(".option-button");
+        optionButtons.forEach((button) => {
+          button.disabled = true;
+          button.style.opacity = "0.6";
+          button.style.cursor = "default";
+          button.onmouseenter = null;
+          button.onmouseleave = null;
         });
-        
-        // Message sending
-        sendBtn.addEventListener("click", async () => {
-            const msg = msgInput.value.trim();
-            if (!msg || !currentChatId) {
-                // console.warn("Widget: Cannot send message. Message empty or no currentChatId.");
-                return;
+      });
+      // --- END NEW LOGIC ---
+
+      hideTypingIndicator();
+
+      let uploadedFileUrl = [];
+      if (files.length > 0) {
+        // console.log("Widget: Files detected. Starting upload process.");
+        try {
+          const formData = new FormData();
+          for (let i = 0; i < files.length; i++) {
+            formData.append("media", files[i]); // 'files' should match your server's expected field name
+            formData.append("chatId", currentChatId);
+          }
+
+          const uploadResponse = await fetch(`${backendUrl}/api/files`, {
+            // Use your backendUrl
+            method: "POST",
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.message || "File upload failed.");
+          }
+
+          const uploadResult = await uploadResponse.json();
+          uploadedFileUrl = uploadResult.data.url || []; // Assuming your server returns { fileUrls: [...] }
+          // console.log("Widget: Files uploaded successfully. URLs:", uploadedFileUrl);
+
+          console.log("uploadedFileUrl", uploadedFileUrl);
+
+          // Optionally, render a message indicating file upload success
+        } catch (error) {
+          console.error("Widget: Error uploading files:", error);
+          renderMessage(
+            "bot",
+            `Error uploading file(s): ${error.message}`,
+            new Date().toISOString()
+          );
+          // Do not send the text message if file upload fails critically
+          return;
+        }
+      }
+
+      // Combine message text and file URLs for sending via socket
+      let messageToSend = msg;
+      if (uploadedFileUrl.length > 0) {
+        const fileLinks = uploadedFileUrl
+          .map((url) => `[${url.split("/").pop()}](${url})`)
+          .join(", ");
+        messageToSend = messageToSend
+          ? `${messageToSend}\n\nUploaded Files: ${fileLinks}`
+          : `Uploaded Files: ${fileLinks}`;
+      }
+
+      renderMessage("user", messageToSend, new Date().toISOString());
+      msgInput.value = "";
+      fileInput.value = ""; // Clear the file input after sending
+
+      // console.log("Widget: Emitting 'message' to server. ChatId:", currentChatId);
+
+      socket.emit("message", {
+        chatbotCode,
+        chatId: currentChatId,
+        email: userEmail,
+        message: messageToSend, // Send the combined message
+        currentWebsiteURL,
+        fileUrl: uploadedFileUrl, // Include file URLs in the socket message
+      });
+
+      updateInputAreaVisibility(true);
+      // console.log("Widget: Message sent by user. Showing input field.");
+    });
+
+    msgInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        sendBtn.click();
+      }
+    });
+
+    // Event listener for file input change (optional, for immediate feedback)
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        // console.log(`Widget: ${fileInput.files.length} file(s) selected.`);
+        // You could display selected file names here if desired
+      }
+    });
+
+    // Back button
+    backBtn.addEventListener("click", showChatList);
+
+    // Socket event listeners
+    socket.on("connect", () => {
+      // console.log("Chatbot connected:");
+    });
+
+    socket.on("new_chat_data", (data) => {
+      // console.log("Widget received new_chat_data:", data);
+      currentChatId = data.chat._id;
+      localStorage.setItem("currentChatId", currentChatId);
+      // console.log("Widget: New chat data received. Joining new chat room:", currentChatId);
+      socket.emit("join_chat", { chatId: currentChatId });
+    });
+
+    socket.on("reply", (data) => {
+      hideTypingIndicator();
+      // console.log("Widget received 'reply' event:", data);
+      // The renderMessage function now handles setting isInputVisible and updating inputArea display
+      // This is the primary trigger for showing/hiding the input based on bot response.
+      renderMessage(
+        data.sender,
+        data.text,
+        data.timestamp || new Date().toISOString(),
+        data.options
+      );
+    });
+
+    socket.on("bot_typing_start", () => {
+      // console.log("Widget received bot_typing_start");
+      showTypingIndicator();
+    });
+
+    socket.on("bot_typing_stop", () => {
+      // console.log("Widget received bot_typing_stop");
+      hideTypingIndicator();
+    });
+
+    socket.on("chat_update", (data) => {
+      // console.log("Widget received 'chat_update' event:", data);
+      if (data.chatId === currentChatId) {
+        if (data.message && data.sender === "bot") {
+          // Chat update with a new message (e.g., from an agent)
+          renderMessage(
+            data.sender,
+            data.message,
+            new Date().toISOString(),
+            data.options
+          );
+        }
+        if (data.status === "closed") {
+          updateInputAreaVisibility(false); // Chat closed, hide input permanently
+          // console.log("Widget: Chat_update: Chat status changed to closed. Hiding input.");
+          // Render message if it wasn't already part of the `data.message` above
+          if (!data.message) {
+            renderMessage(
+              "bot",
+              t["This conversation has been closed."],
+              new Date().toISOString()
+            );
+          }
+        } else if (data.status === "open") {
+          // If chat becomes open, and the *last message* (whether from this update or previously)
+          // doesn't have options, show the input.
+          // console.log("Widget: Chat_update: Chat status changed to open. Re-evaluating input visibility.");
+          // Re-evaluate input visibility based on the very last message in the container
+          const lastMessageElement = messagesContainer.lastElementChild;
+          if (
+            lastMessageElement &&
+            lastMessageElement.classList.contains("message-bubble")
+          ) {
+            const optionButtons =
+              lastMessageElement.querySelectorAll(".option-button");
+            // If the last message in the UI *still* has active options, keep input hidden
+            if (
+              optionButtons.length > 0 &&
+              Array.from(optionButtons).some((btn) => !btn.disabled)
+            ) {
+              updateInputAreaVisibility(false);
+            } else {
+              // No options in the last message, or options were disabled, so show input.
+              updateInputAreaVisibility(true);
+
             }
         
             // --- NEW LOGIC TO DISABLE PREVIOUS OPTIONS ---
