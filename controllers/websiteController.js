@@ -255,6 +255,7 @@ export const updateWebsite = async (req, res) => {
     userId,
     predefinedAnswers,
     aiSummary,
+    faqs
   } = req.body;
   const websiteId = req.params.id;
 
@@ -277,7 +278,8 @@ export const updateWebsite = async (req, res) => {
     website.description = description || website.description;
     website.language = language || website.language;
     website.predefinedAnswers = predefinedAnswers || website.predefinedAnswers;
-    website.aiSummary = aiSummary || website.aiSummary
+    website.aiSummary = aiSummary || website.aiSummary;
+    website.faqs = faqs || website.faqs;
 
     if (preferences) {
       website.preferences = { ...website.preferences, ...preferences };
@@ -888,6 +890,7 @@ export const getAiSummary = async (req, res) => {
   }
 };
 
+
 // NEW: Controller function to update AI summary for a website
 export const updateAiSummary = async (req, res) => {
   const websiteId = req.params.websiteId; // Using websiteId from URL parameter
@@ -911,6 +914,41 @@ export const updateAiSummary = async (req, res) => {
     res.status(200).json({ message: "AI summary updated successfully.", websiteId: website._id, newAiSummary: website.aiSummary });
   } catch (err) {
     console.error(`Error updating AI summary for website ${websiteId}:`, err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+export const getWebsiteFaqs= async (req, res) => {
+  const chatbotCode = req.params.chatbotCode; // Using websiteId from URL parameter
+
+  try {
+    const website = await Website.findOne({chatbotCode: chatbotCode});
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    // Return the aiSummary field
+    res.status(200).json({ faqs: website.faqs.map(faq => ({ _id: faq._id, title: faq.title, description: faq.description })  )});
+  } catch (err) {
+    console.error(`Error fetching faqs for website ${chatbotCode}:`, err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+export const getWebsiteSingleFaq = async (req, res) => {
+  const chatbotCode = req.params.chatbotCode; // Using websiteId from URL parameter
+  const faqId = req.params.faqId;
+
+  try {
+    const website = await Website.findOne({chatbotCode: chatbotCode});
+    if (!website) {
+      return res.status(404).json({ message: "Website not found." });
+    }
+
+    // Return the aiSummary field
+    res.status(200).json({ answer: website.faqs.find(faq => faq._id.toString() === faqId)?.answer || ""});
+  } catch (err) {
+    console.error(`Error fetching faqs for website ${chatbotCode}:`, err.message);
     res.status(500).send("Server Error");
   }
 };
