@@ -386,7 +386,92 @@ const multiLanguage = {
         pt: "Erro ao processar sua mensagem.",
         ro: "Eroare la procesarea mesajului dvs.",
         fi: "Virhe viestisi käsittelyssä."
-    }
+    },
+    "Powered by": {
+    "en": "Powered by",
+    "uk": "Працює на базі",
+    "pl": "Zasilane przez",
+    "fr": "Propulsé par",
+    "de": "Bereitgestellt von",
+    "es": "Desarrollado por",
+    "it": "Offerto da",
+    "pt": "Desenvolvido por",
+    "ro": "Oferit de",
+    "fi": "Toimii palvelun avulla"
+    },
+    "Home": {
+    "en": "Home",
+    "uk": "Головна",
+    "pl": "Strona główna",
+    "fr": "Accueil",
+    "de": "Startseite",
+    "es": "Inicio",
+    "it": "Home",
+    "pt": "Início",
+    "ro": "Acasă",
+    "fi": "Etusivu"
+    },
+    "Messages": {
+        "en": "Messages",
+        "uk": "Повідомлення",
+        "pl": "Wiadomości",
+        "fr": "Messages",
+        "de": "Nachrichten",
+        "es": "Mensajes",
+        "it": "Messaggi",
+        "pt": "Mensagens",
+        "ro": "Mesaje",
+        "fi": "Viestit"
+    },
+    "Help": {
+        "en": "Help",
+        "uk": "Допомога",
+        "pl": "Pomoc",
+        "fr": "Aide",
+        "de": "Hilfe",
+        "es": "Ayuda",
+        "it": "Aiuto",
+        "pt": "Ajuda",
+        "ro": "Ajutor",
+        "fi": "Apua"
+    },
+    "Search for help": {
+    "en": "Search for help",
+    "uk": "Пошук допомоги",
+    "pl": "Szukaj pomocy",
+    "fr": "Rechercher de l'aide",
+    "de": "Hilfe durchsuchen",
+    "es": "Buscar ayuda",
+    "it": "Cerca aiuto",
+    "pt": "Procurar ajuda",
+    "ro": "Caută ajutor",
+    "fi": "Etsi apua"
+    },
+    "Help & Support": {
+    "en": "Help & Support",
+    "uk": "Допомога та підтримка",
+    "pl": "Pomoc i wsparcie",
+    "fr": "Aide et support",
+    "de": "Hilfe & Support",
+    "es": "Ayuda y soporte",
+    "it": "Aiuto e supporto",
+    "pt": "Ajuda e suporte",
+    "ro": "Ajutor și suport",
+    "fi": "Ohjeet ja tuki"
+},
+"Find answers to common questions and get help with using our platform.": {
+    "en": "Find answers to common questions and get help with using our platform.",
+    "uk": "Знайдіть відповіді на поширені запитання та отримайте допомогу щодо використання нашої платформи.",
+    "pl": "Znajdź odpowiedzi na najczęstsze pytania i uzyskaj pomoc w korzystaniu z naszej platformy.",
+    "fr": "Trouvez des réponses aux questions fréquentes et obtenez de l'aide pour utiliser notre plateforme.",
+    "de": "Finden Sie Antworten auf häufig gestellte Fragen und erhalten Sie Hilfe bei der Nutzung unserer Plattform.",
+    "es": "Encuentra respuestas a preguntas frecuentes y obtén ayuda para usar nuestra plataforma.",
+    "it": "Trova risposte alle domande frequenti e ricevi assistenza per usare la nostra piattaforma.",
+    "pt": "Encontre respostas para perguntas frequentes e obtenha ajuda para usar nossa plataforma.",
+    "ro": "Găsește răspunsuri la întrebări frecvente și obține ajutor pentru utilizarea platformei noastre.",
+    "fi": "Löydä vastaukset yleisiin kysymyksiin ja saa apua alustan käyttöön."
+}
+
 };
 
 export default multiLanguage;

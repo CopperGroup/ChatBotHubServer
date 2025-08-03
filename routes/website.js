@@ -17,6 +17,8 @@ import {
   freeTrialEnded,
   paymentWarning,
   addCredits,
+  getWebsiteFaqs,
+  getWebsiteSingleFaq,
   // NEW: Import the new functions
   getAiSummary,
   updateAiSummary,
@@ -29,9 +31,10 @@ router.post("/", createWebsite);
 router.get("/", getAllWebsites);
 router.get("/:id", getWebsiteById);
 router.get("/by-link/search", getWebsiteByLink);
-router.put("/:id", updateWebsite);
-router.delete("/:id", deleteWebsite);
-
+router.put("/:id", authMiddleware, updateWebsite);
+router.delete("/:id", authMiddleware, deleteWebsite);
+router.get("/faqs/:chatbotCode", getWebsiteFaqs)
+router.get("/faqs/:chatbotCode/:faqId", getWebsiteSingleFaq)
 // NEW: Unprotected endpoints for AI Summary
 // GET /websites/:websiteId/summary - To retrieve the AI summary
 router.get("/:websiteId/summary", getAiSummary);

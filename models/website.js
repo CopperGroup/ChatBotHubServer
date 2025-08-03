@@ -11,35 +11,56 @@ const websiteSchema = new mongoose.Schema({
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
     staffMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }],
     preferences: {
-        type: Object,
+        type: Object, // Mixed type for preferences object
         default: {
             colors: {
-                gradient1: '#667eea',
-                gradient2: '#764ba2',
+                gradient1: '#10b981', // Default primary color
+                gradient2: '#059669', // Default secondary color
             },
-            header: 'Chat Support',
+            header: 'Chat Support', // Default chat header title
+            heading: 'Hi there 👋 <br/> How can we help you today?', // New: Default welcome heading
             allowAIResponses: false,
             language: "en",
             dynamiclyAdaptToLanguage: false,
             allowedPaths: [],
             disallowedPaths: [],
             dailyTokenLimit: null,
-            scrapePaths: []
+            scrapePaths: [],
+            // New features added to preferences:
+            theme: 'light', // 'light' or 'dark'
+            branding: true, // true to show "Powered by", false to hide
+            tabsMode: true, // true for tab navigation, false for single chat view
+            logoUrl: './logo.png', // URL for custom logo image
+            bgImageUrl: 'bg-image.png', // URL for background image (if backgroundType is 'image')
+            backgroundType: 'gradient', // 'gradient', 'image', or 'solid'
+            singleBackgroundColor: '#FFFFFF', // Solid background color (if backgroundType is 'solid')
+            quickActions: [], // Array of quick action button objects
+            selectedHomeTabHelpArticles: [], // Array of selected help article IDs/titles
+            showQuickActions: true, // Controls visibility of Quick Actions section
+            showHomeTabHelpSection: true, // Controls visibility of Help Articles section
+            showStaffInitials: true, // Controls visibility of Staff Initials
+            selectedStaffInitials: [], // Array of selected staff initials (strings)
         },
     },
     creditCount: { type: Number, default: 100 },
     lastCreditBoostDate: { type: Date, default: null },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    freeTrial: { type: Date}, // Date when free trial started (NULL if no trial/ended)
-    freeTrialPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null }, // NEW: The ID of the plan that granted the free trial
-    freeTrialEnded: { type: Boolean, default: false }, // Changed default to false, meaning trial is active or not started yet.
+    freeTrial: { type: Date},
+    freeTrialPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null },
+    freeTrialEnded: { type: Boolean, default: false },
     lastProcessedPaymentId: { type: String, unique: true, sparse: true },
     stripeSubscriptionId: { type: String, default: null },
     billedSuccessfuly: { type: Boolean, default: false },
     exlusiveCustomer: { type: Boolean, default: false },
     aiSummary: { type: String, default: ""},
-    // NEW: Field to store Shopify access token
     shopifyAccessToken: { type: String, default: null },
+    faqs: [
+        {
+            title: String,
+            description: String,
+            answer: String,
+        }
+    ]
 }, { timestamps: true });
 
 export default mongoose.model('Website', websiteSchema);
