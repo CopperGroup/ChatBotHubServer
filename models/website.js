@@ -11,35 +11,52 @@ const websiteSchema = new mongoose.Schema({
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
     staffMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }],
     preferences: {
-        type: Object, // Mixed type for preferences object
+        type: Object,
         default: {
             colors: {
-                gradient1: '#10b981', // Default primary color
-                gradient2: '#059669', // Default secondary color
+                gradient1: '#00bc7c',
+                gradient2: '#009a67',
             },
-            header: 'Chat Support', // Default chat header title
-            heading: 'Hi there 👋 <br/> How can we help you today?', // New: Default welcome heading
+            header: 'Chat Bot Hub',
+            heading: {
+                text: 'Hi there 👋 <br/> How can we help you today?',
+                color: '#1f2937',
+                shadow: true,
+                shadowColor: '#efebeb',
+                fontSize: '24px'
+            },
             allowAIResponses: false,
             language: "en",
             dynamiclyAdaptToLanguage: false,
             allowedPaths: [],
             disallowedPaths: [],
             dailyTokenLimit: null,
-            scrapePaths: [],
-            // New features added to preferences:
-            theme: 'light', // 'light' or 'dark'
-            branding: true, // true to show "Powered by", false to hide
-            tabsMode: true, // true for tab navigation, false for single chat view
-            logoUrl: './logo.png', // URL for custom logo image
-            bgImageUrl: 'bg-image.png', // URL for background image (if backgroundType is 'image')
-            backgroundType: 'gradient', // 'gradient', 'image', or 'solid'
-            singleBackgroundColor: '#FFFFFF', // Solid background color (if backgroundType is 'solid')
-            quickActions: [], // Array of quick action button objects
-            selectedHomeTabHelpArticles: [], // Array of selected help article IDs/titles
-            showQuickActions: true, // Controls visibility of Quick Actions section
-            showHomeTabHelpSection: true, // Controls visibility of Help Articles section
-            showStaffInitials: true, // Controls visibility of Staff Initials
-            selectedStaffInitials: [], // Array of selected staff initials (strings)
+            scrapePaths: ["/blog","/blog/multi-language-support","/blog/workflow-automation-v12","/blog/telegram-notifications","/blog/ai-agent-credits","/blog/staff-management-system","/blog/customer-support-automation","/blog/chatbot-integration-guide","/"],
+            theme: 'light',
+            branding: true,
+            tabsMode: true,
+            logoUrl: './logo.png', // The provided object doesn't have a logoUrl, so we retain the default.
+            bgImageUrl: 'bg-image.png',
+            backgroundType: 'image',
+            singleBackgroundColor: '#d10a0a',
+            quickActions: [{
+                text: "Send us a message",
+                deepLinkType: "internal",
+                internalTab: "messages",
+                internalView: "chat",
+                icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" height=\"16\" width=\"16\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5\" /></svg>"
+            }, {
+                text: "Get help",
+                deepLinkType: "internal",
+                internalTab: "help",
+                icon: "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" height=\"16\" width=\"16\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z\" /></svg>"
+            }],
+            selectedHomeTabHelpArticles: [],
+            showQuickActions: true,
+            showHomeTabHelpSection: false,
+            showStaffInitials: true,
+            selectedStaffInitials: [],
+            bgColor: '#000000'
         },
     },
     creditCount: { type: Number, default: 100 },
