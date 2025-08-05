@@ -34,7 +34,7 @@
                 width: 5rem;    /* Default for larger screens */
                 height: 5rem;   /* Default for larger screens */
                 border: none;
-                z-index: 1000;
+                z-index: 10000;
                 opacity: 0; /* Initially hidden */
             }
             .chatbot-iframe.loaded {
