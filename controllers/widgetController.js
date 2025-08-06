@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 // Assuming these are in a models and utils directory relative to this file
 import Website from '../models/website.js'; 
 import multiLanguage from '../services/multiLanguage.js'; 
+import plan from '../models/plan.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,7 @@ function createChatbotConfig(website) {
     logoUrl: preferences.logoUrl || "./logo.png",
     homeTab: homeTab,
     translatedPhrases: {}, 
+    allowFileSharing: ["Pro", "Enterprise"].includes(website.plan.name),
     socketIoUrl: process.env.SOCKET_URL,
     backendUrl: process.env.BACKEND_URL,
   };
@@ -112,7 +114,13 @@ export const getChatbotWidget = async (req, res) => {
   }
 
   try {
-    const website = await Website.findOne({ chatbotCode });
+    const website = await Website.findOne({ chatbotCode }).populate(
+        {
+            path: "plan",
+            model: plan,
+            select: "name"
+        }
+    );
 
     if (!website) {
       console.log(`Chatbot widget request: Website with chatbotCode ${chatbotCode} not found.`);

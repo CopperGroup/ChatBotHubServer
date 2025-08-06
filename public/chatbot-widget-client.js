@@ -58,7 +58,7 @@
 
         // Create iframe and skeleton elements
         const iframe = document.createElement('iframe');
-        iframe.src = "http://127.0.0.1:5500/widjet/"; // IMPORTANT: Update this path to your actual chatbot.html file
+        iframe.src = "https://widjet.chatboth.com"; // IMPORTANT: Update this path to your actual chatbot.html file
         iframe.title = "Chatbot Widget";
         iframe.className = "chatbot-iframe";
         iframe.id = "chatbot-iframe";
