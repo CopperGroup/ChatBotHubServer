@@ -30,7 +30,50 @@ export const uploadSingleMedia = async (req, res) => {
 
     const result = await uploadMedia(file.buffer, fileNameInB2, file.mimetype);
 
-    console.log("result", result);
+    if (!result) {
+      throw {
+        code: 500,
+        message: "Failed to get public URL from Backblaze B2 after upload.",
+      };
+    }
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        url: result.Location,
+        fileName: fileNameInB2,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(err.code || 500)
+      .json({ message: err.message || "Server error during media upload." });
+  }
+};
+
+// C:\Users\Admin\Desktop\ChatBotHub\ChatBotHubServer\controllers\fileController.js
+/**
+ * @desc Uploads a single media file to Backblaze B2 and returns its public URL
+ * @route POST /api/v1/upload/media
+ * @access Protected (only authenticated users can upload)
+ */
+export const uploadSingleMediaPublic = async (req, res) => {
+  // Changed to named export
+  try {
+    const file = req.file;
+    const websiteId = req.body.websiteId;
+
+    if (!file) {
+      throw { code: 400, message: "No media file provided for upload." };
+    }
+
+    const fileExtension = file.originalname.split(".").pop();
+    const fileNameInB2 = `uploads/${websiteId}/${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.${fileExtension}`;
+
+    const result = await uploadMedia(file.buffer, fileNameInB2, file.mimetype);
 
     if (!result) {
       throw {
