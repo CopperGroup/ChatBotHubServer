@@ -709,14 +709,6 @@ export async function handleWidgetMessage(
             "SERVER ERROR: Error communicating with AI server:",
             aiError
           );
-          aiBotMessage = {
-            sender: "bot",
-            text: multiLanguage[
-              "There was a problem reaching our AI. Please try again later."
-            ][website.preferences.language || "en"],
-            timestamp: new Date().toISOString(),
-          };
-          messages.push(aiBotMessage);
         } finally {
           socket.emit("bot_typing_stop");
           console.log("SERVER DEBUG: Emitted 'bot_typing_stop' after AI call.");

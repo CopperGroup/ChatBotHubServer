@@ -2,6 +2,7 @@
     // --- Configuration for the chatbot ---
     const chatbotConfig = window.chatbotConfig;
 
+    console.log(chatbotConfig)
     // A single function to encapsulate all the initialization logic
     async function initializeChatbot() {
         if (!chatbotConfig) {
@@ -9,6 +10,7 @@
             return;
         }
 
+        console.log(chatbotConfig)
         const result = await fetch(`${chatbotConfig.backendUrl}/widget/validate`, {
             method: "POST",
             headers: {
